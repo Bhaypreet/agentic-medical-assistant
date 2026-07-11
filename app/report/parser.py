@@ -1,11 +1,10 @@
 import platform
 import pdfplumber
 import pytesseract
-from PIL import Image
+from PIL import Image, ImageOps
 
 if platform.system() == "Windows":
     pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-# on Linux (Render), tesseract-ocr is installed via apt and is already on PATH
 
 
 def extract_text_from_pdf(pdf_path: str):
@@ -26,10 +25,38 @@ def extract_text_from_pdf(pdf_path: str):
     return pages
 
 
+def _preprocess_for_ocr(image: Image.Image) -> Image.Image:
+    """
+    Improves OCR accuracy on dense lab-report tables:
+    - upscales small images (Tesseract struggles with small text)
+    - converts to grayscale
+    - increases contrast via auto-contrast
+    """
+
+    # upscale if the image is on the smaller side
+    if image.width < 1800:
+        scale = 1800 / image.width
+        new_size = (int(image.width * scale), int(image.height * scale))
+        image = image.resize(new_size, Image.LANCZOS)
+
+    image = image.convert("L")          # grayscale
+    image = ImageOps.autocontrast(image)
+
+    return image
+
+
 def extract_text_from_image(image_path: str):
 
     image = Image.open(image_path)
-    text = pytesseract.image_to_string(image)
+    processed = _preprocess_for_ocr(image)
+
+    text = pytesseract.image_to_string(processed, config="--psm 6")
+
+    # DEBUG: print what OCR actually saw, so we can diagnose extraction
+    # issues from the backend terminal
+    print("\n===== OCR EXTRACTED TEXT (first 500 chars) =====")
+    print(text[:500])
+    print("===== END OCR TEXT =====\n")
 
     return [{
         "page": 1,

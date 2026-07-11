@@ -1,14 +1,11 @@
 langchain
 langchain-community
-langchain-huggingface
 langchain-text-splitters
 langgraph
 langchain-groq
 groq
 faiss-cpu
-sentence-transformers
-transformers
-torch
+fastembed
 pdfplumber
 pytesseract
 Pillow

@@ -45,10 +45,20 @@ def extract_report_information(report_text: str):
 
     response = safe_invoke(prompt)
 
-    return response.content
+    raw_content = response.content
+
+    # DEBUG: see exactly what the LLM returned, before any cleanup
+    print("\n----- RAW LLM EXTRACTION RESPONSE -----")
+    print(repr(raw_content)[:1000])
+    print("----- END RAW RESPONSE -----\n")
+
+    return raw_content
 
 
 def clean_json_response(response_text: str):
+
+    if not response_text or not response_text.strip():
+        raise ValueError("LLM returned an empty extraction response.")
 
     response_text = response_text.strip()
 
