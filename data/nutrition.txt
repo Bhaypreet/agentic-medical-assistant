@@ -1,0 +1,105 @@
+Topic: Nutrition and Healthy Diet
+Source: WHO Fact Sheet on Healthy Diet / General Nutritional Medicine
+
+DESCRIPTION:
+Nutrition refers to the intake of food as it relates to the body's dietary needs. Good nutrition — an adequate, well-balanced diet combined with regular physical activity — is the cornerstone of good health. Poor nutrition can lead to reduced immunity, increased susceptibility to disease, impaired physical and mental development, and reduced productivity. Malnutrition in all its forms (undernutrition, micronutrient deficiencies, overweight, and obesity) is a major global health burden.
+
+WHO GLOBAL FACTS:
+- An unhealthy diet is a leading risk factor for the global burden of disease.
+- Poor diet contributes to all forms of malnutrition and to noncommunicable diseases (NCDs) such as heart disease, stroke, diabetes, and cancer.
+- Globally, the prevalence of obesity nearly tripled between 1975 and 2016.
+- Insufficient fruit and vegetable consumption causes around 3.9 million deaths per year worldwide.
+- High sodium intake contributes to approximately 1.89 million deaths annually from cardiovascular causes.
+
+ESSENTIAL NUTRIENTS AND THEIR ROLES:
+
+1. CARBOHYDRATES:
+- Primary energy source for the body and brain
+- Sources: rice, wheat, oats, bread, potatoes, fruits, vegetables
+- Prefer complex carbs (whole grains) over refined (white bread, sugar)
+
+2. PROTEINS:
+- Build and repair tissues, enzymes, hormones, and immune cells
+- Sources: meat, fish, eggs, dairy, legumes (lentils, beans), nuts, soy
+- Complete proteins (all essential amino acids): meat, eggs, dairy, quinoa
+- Plant proteins are often incomplete and need to be combined
+
+3. FATS:
+- Energy storage, hormone production, absorption of fat-soluble vitamins (A, D, E, K)
+- Healthy (unsaturated) fats: olive oil, avocado, nuts, fatty fish (omega-3)
+- Unhealthy fats: saturated fats (butter, fatty meats) and trans fats (partially hydrogenated oils)
+- WHO recommends limiting saturated fat to less than 10% of total energy intake and trans fats to less than 1%
+
+4. VITAMINS:
+- Vitamin A: vision, immune function, skin health — sources: liver, dairy, carrots, leafy greens
+- Vitamin B complex: energy metabolism, nerve function — sources: meat, legumes, grains
+- Vitamin B12: nerve function, RBC formation — sources: animal products only (vegans need supplements)
+- Vitamin C: immune function, iron absorption, wound healing — sources: citrus, kiwi, broccoli, peppers
+- Vitamin D: bone health, immune function — source: sunlight, fortified foods, fatty fish
+- Vitamin E: antioxidant, immune support — sources: nuts, seeds, vegetable oils
+- Vitamin K: blood clotting, bone metabolism — sources: leafy greens, broccoli
+
+5. MINERALS:
+- Iron: oxygen transport in haemoglobin — sources: red meat, legumes, fortified cereals (deficiency = anemia)
+- Calcium: bone and teeth strength, muscle function — sources: dairy, fortified plant milks, leafy greens
+- Potassium: regulates blood pressure and fluid balance — sources: bananas, oranges, potatoes, legumes
+- Sodium: fluid balance — but excess raises blood pressure; WHO recommends less than 5g/day (about 1 teaspoon of salt)
+- Zinc: immune function, wound healing — sources: meat, shellfish, legumes, seeds
+- Iodine: thyroid function — sources: iodized salt, seafood, dairy
+- Magnesium: muscle and nerve function, blood sugar regulation — sources: nuts, seeds, leafy greens, whole grains
+
+6. WATER:
+- Essential for all bodily functions: digestion, circulation, temperature regulation, waste removal
+- Recommended intake: approximately 2–3 liters per day (from food and fluids)
+- Dehydration signs: dark urine, dry mouth, headache, fatigue, dizziness
+
+RECOMMENDED DIETARY GUIDELINES (WHO):
+- Fruits and vegetables: at least 400g (5 portions) per day
+- Legumes (lentils, beans, peas): regular consumption recommended
+- Whole grains preferred over refined grains
+- Limit free sugars: less than 10% of total energy (ideally less than 5%)
+- Limit salt: less than 5g per day (reduce sodium intake)
+- Limit saturated fat: less than 10% of energy
+- Eliminate industrial trans fats from diet
+- Increase polyunsaturated fats (omega-3, omega-6) from fish, nuts, and seeds
+
+MALNUTRITION — TYPES:
+1. Undernutrition: Inadequate calories, protein, or micronutrients
+   - Wasting: low weight for height (acute malnutrition in children)
+   - Stunting: low height for age (chronic malnutrition, impacts brain development)
+   - Underweight: low weight for age
+2. Micronutrient deficiency (hidden hunger): Lack of specific vitamins/minerals (iron, vitamin A, iodine, zinc)
+3. Overweight and Obesity: Excess calorie intake leading to fat accumulation; increases risk of diabetes, heart disease, cancer, hypertension
+
+SIGNS OF POOR NUTRITION:
+- Constant fatigue and weakness
+- Frequent illness (poor immune function)
+- Slow wound healing
+- Hair loss and brittle nails
+- Dry skin and mouth
+- Poor concentration and memory
+- Muscle weakness or cramps
+
+NUTRITION-RELATED DISEASES:
+- Iron deficiency anemia → fatigue, pallor
+- Rickets (Vitamin D deficiency) → bone deformity in children
+- Scurvy (Vitamin C deficiency) → bleeding gums, easy bruising
+- Pellagra (Vitamin B3/Niacin deficiency) → dermatitis, diarrhea, dementia
+- Kwashiorkor (severe protein deficiency) → edema, pot belly, poor growth in children
+- Marasmus (severe calorie malnutrition) → extreme wasting, muscle loss
+- Goiter (Iodine deficiency) → enlarged thyroid gland
+
+NUTRITION FOR SPECIAL GROUPS:
+- Pregnant women: need extra iron, folate, calcium, omega-3 fatty acids; folate supplements reduce neural tube defects
+- Infants: exclusive breastfeeding recommended for the first 6 months (WHO); breast milk provides complete nutrition
+- Children: need calcium, iron, and adequate protein for growth and brain development
+- Elderly: need calcium, vitamin D, B12; protein to prevent muscle loss (sarcopenia)
+- Vegetarians/Vegans: must ensure adequate B12, iron, zinc, calcium, omega-3, iodine through diet or supplementation
+
+SEEK MEDICAL ATTENTION IF:
+- Significant unexplained weight loss or weight gain
+- Symptoms of specific deficiency (persistent fatigue, swollen joints, bleeding gums)
+- Child not meeting growth milestones
+- Signs of eating disorder (severely restricted eating, binge-purge cycles)
+
+SOURCE: WHO Fact Sheet — Healthy Diet (https://www.who.int/news-room/fact-sheets/detail/healthy-diet) | General Nutritional Medicine

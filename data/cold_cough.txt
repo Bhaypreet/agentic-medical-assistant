@@ -1,0 +1,92 @@
+Disease: Common Cold and Cough
+Source: WHO Fact Sheet on Influenza (Seasonal) / General Medical Knowledge
+
+DESCRIPTION:
+The common cold is a highly contagious viral infection of the upper respiratory tract (nose and throat). It is caused most often by rhinoviruses (over 200 different strains), though other viruses like coronaviruses, adenoviruses, and respiratory syncytial virus (RSV) can also cause cold-like symptoms. A cough can be a symptom of the common cold or a separate condition caused by airway irritation, infection, allergy, or disease. Cold and cough together are among the most frequent reasons people seek medical care globally, though they are usually mild and self-limiting.
+
+DESCRIPTION OF COUGH:
+A cough is a sudden, forceful expulsion of air from the lungs — a protective reflex that clears the airways of mucus, foreign particles, irritants, or microbes.
+Types of cough:
+- Acute cough: Less than 3 weeks — usually caused by a cold, flu, or respiratory infection
+- Subacute cough: 3–8 weeks — often after a respiratory infection (post-infectious cough)
+- Chronic cough: More than 8 weeks — may indicate asthma, GERD, chronic bronchitis, TB, or other conditions
+- Productive cough: Produces mucus/phlegm
+- Dry (non-productive) cough: No mucus; often from irritation or viral infection
+
+SYMPTOMS OF THE COMMON COLD:
+- Runny or stuffy nose (nasal congestion)
+- Sneezing
+- Sore throat
+- Mild headache
+- Low-grade fever (more common in children)
+- Mild body aches
+- Watery eyes
+- Dry or productive cough
+- General feeling of being unwell (malaise)
+- Loss of smell or taste (temporary, especially with COVID-19)
+
+Symptoms typically appear 1–3 days after exposure and last 7–10 days. A cough and congestion may persist for up to 2 weeks.
+
+COLD VS FLU — KEY DIFFERENCES:
+- Cold: Gradual onset, mild fever or no fever, runny nose prominent, mild fatigue, rarely severe
+- Flu (Influenza): Sudden onset, high fever (38–40°C), severe body aches and headache, extreme fatigue, dry cough prominent, can be serious and lead to complications
+- COVID-19: Variable symptoms, may include loss of taste/smell, shortness of breath; severity varies widely
+
+CAUSES:
+- Rhinoviruses (most common): ~40–50% of colds
+- Coronaviruses (non-COVID strains): ~10–15%
+- Adenoviruses, RSV, parainfluenza viruses
+- Influenza viruses (flu)
+- Spread through: respiratory droplets from coughing/sneezing, touching contaminated surfaces then touching the mouth/nose/eyes
+
+CAUSES OF CHRONIC COUGH (if cough persists beyond 8 weeks):
+- Asthma (especially in children)
+- Gastroesophageal reflux disease (GERD/acid reflux)
+- Post-nasal drip (chronic rhinitis or sinusitis)
+- Chronic obstructive pulmonary disease (COPD)
+- Tuberculosis (TB) — especially in South Asia and Africa; persistent productive cough lasting weeks
+- ACE inhibitor medication (a side effect of blood pressure drugs like enalapril)
+- Lung cancer (in smokers or older adults)
+- Whooping cough (Pertussis) — highly contagious, especially dangerous in infants
+
+PREVENTION:
+- Wash hands frequently with soap and water for at least 20 seconds
+- Avoid touching eyes, nose, and mouth with unwashed hands
+- Avoid close contact with sick people
+- Disinfect frequently touched surfaces (doorknobs, phones, keyboards)
+- Use tissues when sneezing or coughing; dispose immediately
+- Get vaccinated: annual influenza vaccine (recommended by WHO), COVID-19 vaccine, whooping cough vaccine
+- Stay home when sick to prevent spreading infection
+- Maintain good general health: adequate sleep, healthy diet, regular exercise (strengthens immune system)
+- Wear a mask in crowded places during respiratory illness seasons
+
+TREATMENT:
+For the common cold (no cure — antivirals do not work against most cold viruses):
+- Rest and get adequate sleep
+- Stay well hydrated: water, warm soups, herbal teas
+- Saline nasal rinse or sprays for congestion relief
+- Steam inhalation (with care) to relieve nasal congestion
+- Honey and warm water/lemon: soothes throat (do not give honey to infants under 1 year)
+- Antipyretics (paracetamol/ibuprofen) for fever and body aches
+- Decongestants: pseudoephedrine, oxymetazoline nasal spray (short-term use only)
+- Antihistamines: for runny nose and sneezing
+- Cough syrups: expectorants (guaifenesin) loosen mucus; suppressants (dextromethorphan) calm dry cough
+
+IMPORTANT: Antibiotics do NOT work against viral colds or flu. Misuse contributes to antibiotic resistance.
+
+SEEK MEDICAL ATTENTION IF:
+- Fever above 39°C (102°F) that lasts more than 3 days
+- Difficulty breathing, chest pain, or wheezing
+- Symptoms do not improve after 10 days (may suggest bacterial infection like sinusitis or pneumonia)
+- Severe headache or ear pain
+- Cough persists longer than 3 weeks
+- Coughing up blood
+- Symptoms in infants under 3 months
+- In people with asthma, COPD, diabetes, or other chronic illness — seek care earlier
+
+GLOBAL CONTEXT:
+- The WHO estimates that seasonal influenza causes 3–5 million cases of severe illness and 250,000–500,000 deaths annually worldwide.
+- Lower respiratory infections (including pneumonia) remain among the top causes of death globally, especially in children under 5 and the elderly.
+- Tuberculosis remains one of the top 10 causes of death worldwide; persistent productive cough for 2+ weeks is a key warning sign requiring testing.
+
+SOURCE: WHO Fact Sheets — Influenza (Seasonal), Pneumonia, Tuberculosis (https://www.who.int/news-room/fact-sheets) | General Clinical Medicine

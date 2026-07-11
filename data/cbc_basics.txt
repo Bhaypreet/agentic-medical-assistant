@@ -1,0 +1,69 @@
+Topic: Complete Blood Count (CBC) — Basics
+Source: General Medical Knowledge / Clinical Hematology
+
+DESCRIPTION:
+A Complete Blood Count (CBC) is one of the most commonly ordered blood tests in medicine. It provides a comprehensive snapshot of the cellular components of blood, helping doctors diagnose, monitor, and manage a wide range of conditions — from infections and anemia to leukemia and immune disorders. The CBC measures the types and quantities of cells in the blood: red blood cells (RBCs), white blood cells (WBCs), and platelets.
+
+WHY IS A CBC ORDERED?
+- Routine health screening
+- Diagnosing infections, inflammation, anemia, and bleeding disorders
+- Monitoring treatments (chemotherapy, radiation, medications)
+- Evaluating symptoms like fatigue, weakness, bruising, or fever
+- Pre-surgical evaluation
+
+KEY COMPONENTS OF A CBC:
+
+1. RED BLOOD CELLS (RBCs / Erythrocytes):
+- Function: Carry oxygen from the lungs to all tissues using haemoglobin
+- Normal range: Men: 4.5–5.5 million cells/µL | Women: 4.0–5.0 million cells/µL
+- High RBC (Polycythemia): dehydration, lung disease, living at high altitude, bone marrow disorder
+- Low RBC: anemia, blood loss, bone marrow failure, nutritional deficiencies
+
+2. HAEMOGLOBIN (Hb/Hgb):
+- Function: The protein inside RBCs that carries oxygen
+- Normal range: Men: 13.5–17.5 g/dL | Women: 12.0–15.5 g/dL
+- Low Hb = Anemia (fatigue, pallor, breathlessness)
+- High Hb = Polycythemia (blood thickening, clot risk)
+
+3. HAEMATOCRIT (Hct/PCV — Packed Cell Volume):
+- Percentage of blood volume occupied by red blood cells
+- Normal: Men: 41–53% | Women: 36–46%
+- Reflects hydration status and red blood cell mass
+
+4. MEAN CORPUSCULAR VOLUME (MCV):
+- Average size of red blood cells
+- Normal: 80–100 fL
+- Low MCV (Microcytic): iron deficiency anemia, thalassemia
+- High MCV (Macrocytic): vitamin B12/folate deficiency, liver disease, alcohol use
+
+5. WHITE BLOOD CELLS (WBCs / Leukocytes):
+- Function: The immune system's defense army — fight infections and diseases
+- Normal total range: 4,000–11,000 cells/µL (4.0–11.0 × 10⁹/L)
+- High WBC (Leukocytosis): bacterial infection, inflammation, leukemia, stress
+- Low WBC (Leukopenia): viral infections, bone marrow disorders, chemotherapy, HIV
+
+WBC DIFFERENTIAL (subtypes):
+- Neutrophils (50–70%): First responders to bacterial and fungal infection
+- Lymphocytes (20–40%): Key in viral infections and immune memory (T cells, B cells)
+- Monocytes (2–8%): Clean up dead cells and pathogens; become macrophages in tissue
+- Eosinophils (1–4%): Fight parasitic infections; elevated in allergies and asthma
+- Basophils (0.5–1%): Involved in allergic reactions; release histamine
+
+6. PLATELETS (Thrombocytes):
+- Function: Essential for blood clotting — stop bleeding when a vessel is damaged
+- Normal range: 150,000–400,000 cells/µL (150–400 × 10⁹/L)
+- Low Platelets (Thrombocytopenia): bleeding risk — dengue fever, leukemia, autoimmune disease, medications
+- High Platelets (Thrombocytosis): infection, inflammation, iron deficiency, bone marrow disorders (clot risk)
+
+HOW IS THE TEST DONE?
+A small blood sample is drawn from a vein (usually in the arm) and analyzed in a laboratory. Results are typically available within a few hours.
+
+WHEN TO REPEAT A CBC:
+- When symptoms like fatigue, unexplained bruising, fever, or weight loss persist
+- Monitoring during treatment of anemia, infection, or blood disorders
+- Regular screening in people with chronic conditions
+
+UNDERSTANDING ABNORMAL RESULTS:
+A single abnormal value does not always mean disease. Results must be interpreted alongside symptoms, patient history, and other tests. A doctor evaluates the full picture before making a diagnosis.
+
+SOURCE: General Clinical Hematology | Standard Medical Reference

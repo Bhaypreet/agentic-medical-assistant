@@ -1,0 +1,111 @@
+Disease: Chest Pain (including Heart Attack / Cardiovascular Disease)
+Source: WHO Fact Sheet on Cardiovascular Diseases (Updated July 2025) / General Clinical Medicine
+
+DESCRIPTION:
+Chest pain is any discomfort or pain felt in the chest area — from the neck to the upper abdomen. It is one of the most common and serious medical symptoms because it can indicate a life-threatening condition such as a heart attack (myocardial infarction) or pulmonary embolism, or may be caused by less dangerous conditions like acid reflux or muscle strain. Correctly identifying the cause of chest pain is critical, and any sudden or severe chest pain should be treated as a medical emergency until proven otherwise.
+
+IMPORTANT: NEVER IGNORE CHEST PAIN. Seek emergency medical care immediately if chest pain is sudden, severe, or accompanied by other warning signs.
+
+WHO GLOBAL FACTS ON CARDIOVASCULAR DISEASE (2025):
+- Cardiovascular diseases (CVDs) are the leading cause of death globally.
+- An estimated 19.8 million people died from CVDs in 2022 — approximately 32% of all global deaths.
+- 85% of CVD deaths are due to heart attack and stroke.
+- Over three-quarters of CVD deaths occur in low- and middle-income countries.
+- Most cardiovascular diseases can be prevented by addressing lifestyle risk factors.
+
+TYPES OF CHEST PAIN AND THEIR CAUSES:
+
+1. CARDIAC (HEART-RELATED) — Most Serious:
+   a. Heart Attack (Myocardial Infarction):
+   - Caused by a blocked coronary artery cutting off blood supply to the heart muscle
+   - Pain description: crushing, squeezing, pressure or heaviness in the center or left of the chest
+   - Radiates to: left arm, jaw, neck, back, or shoulder
+   - Accompanied by: sweating, nausea/vomiting, shortness of breath, dizziness, extreme fatigue
+   - Women may experience atypical symptoms: back or jaw pain, nausea, unusual fatigue (without classic chest pain)
+   - THIS IS A MEDICAL EMERGENCY — call emergency services immediately
+
+   b. Angina:
+   - Chest pain due to reduced blood flow to the heart (but no permanent damage yet)
+   - Stable angina: predictable pain triggered by exertion or stress; relieved by rest or nitroglycerin
+   - Unstable angina: occurs at rest, more intense, longer-lasting — WARNING sign of impending heart attack
+
+   c. Pericarditis:
+   - Inflammation of the sac surrounding the heart
+   - Sharp, stabbing chest pain, worse when lying down and better when sitting up/leaning forward
+   - May follow a viral infection
+
+2. PULMONARY (LUNG-RELATED):
+   - Pulmonary Embolism (PE): Blood clot in the lung arteries — sudden sharp chest pain, rapid breathing, low oxygen — EMERGENCY
+   - Pneumonia / Pleurisy: Infection in the lungs or inflammation of lung lining — sharp pain worsened by breathing or coughing
+   - Pneumothorax (collapsed lung): Sudden sharp pain with difficulty breathing
+
+3. GASTROINTESTINAL (DIGESTIVE):
+   - Acid Reflux (GERD): Burning pain (heartburn) in the chest/throat; worse after eating, lying down; relieved by antacids
+   - Esophageal spasm: Sudden, severe chest pain from esophageal muscle cramps — can mimic heart attack
+   - Hiatal hernia: Part of stomach pushes into chest — causes reflux and pressure
+
+4. MUSCULOSKELETAL:
+   - Costochondritis: Inflammation of cartilage connecting ribs to breastbone — sharp pain, tender to touch
+   - Muscle strain: From injury, exercise, coughing, or lifting — localized pain, worsened by movement or palpation
+   - Rib fracture: Severe sharp pain, especially when breathing or moving
+
+5. PSYCHOLOGICAL:
+   - Panic attack: Intense anxiety with chest tightness, palpitations, shortness of breath — mimics heart attack
+   - Anxiety disorder: Chronic chest tightness or pain without physical cause
+
+SYMPTOMS THAT SUGGEST HEART ATTACK (EMERGENCY):
+- Crushing or squeezing pressure in the center of the chest
+- Pain spreading to arm (especially left), jaw, shoulder, neck, or back
+- Shortness of breath
+- Cold sweats and clamminess
+- Nausea or vomiting
+- Light-headedness or sudden dizziness
+- Sudden extreme fatigue
+- Rapid or irregular heartbeat
+
+RISK FACTORS FOR HEART DISEASE AND CHEST PAIN:
+- High blood pressure (hypertension)
+- High cholesterol (dyslipidemia)
+- Diabetes
+- Smoking and tobacco use
+- Obesity and physical inactivity
+- Unhealthy diet (high in saturated fat, salt, and sugar)
+- Excessive alcohol consumption
+- Family history of heart disease
+- Age (men over 45, women over 55 at higher risk)
+- Air pollution exposure
+
+DIAGNOSIS:
+Doctors use multiple tests to identify the cause of chest pain:
+- ECG (Electrocardiogram): Records electrical activity of the heart — can detect heart attack, arrhythmia
+- Blood tests: Troponin (released when heart muscle is damaged) — key marker for heart attack
+- Chest X-ray: Shows lungs, heart size, and blood vessels
+- Echocardiogram (ultrasound of the heart)
+- CT angiography: Detailed images of heart and lung blood vessels
+- Stress test: Monitors heart under physical stress
+
+TREATMENT:
+For heart attack: Aspirin immediately (chew, do not swallow whole), then emergency thrombolysis or percutaneous coronary intervention (PCI/angioplasty) in hospital; ongoing medications include beta-blockers, ACE inhibitors, statins
+For angina: Nitroglycerin (GTN spray or tablet), long-term medications, lifestyle changes
+For acid reflux: Antacids, proton pump inhibitors (omeprazole), lifestyle modification
+For pulmonary embolism: Anticoagulants (blood thinners like heparin, warfarin, rivaroxaban)
+For musculoskeletal pain: NSAIDs (ibuprofen), physiotherapy, rest
+
+PREVENTION OF HEART-RELATED CHEST PAIN:
+- Eat a heart-healthy diet (Mediterranean-style: fruits, vegetables, whole grains, olive oil, fish)
+- Exercise regularly: 150 minutes of moderate activity per week
+- Quit smoking and avoid secondhand smoke
+- Control blood pressure, blood sugar, and cholesterol
+- Maintain a healthy body weight
+- Limit alcohol
+- Manage stress
+- Regular health checkups for early detection
+
+SEEK EMERGENCY CARE IMMEDIATELY IF:
+- Chest pain is sudden, severe, or crushing
+- Pain spreads to the arm, jaw, back, or neck
+- Chest pain with shortness of breath, sweating, or nausea
+- You suspect a heart attack or pulmonary embolism
+Call emergency services (112 in India, 911 in USA, 999 in UK) — do not drive yourself
+
+SOURCE: WHO Fact Sheet — Cardiovascular Diseases (https://www.who.int/news-room/fact-sheets/detail/cardiovascular-diseases-(cvds)) | Updated July 2025 | General Clinical Medicine

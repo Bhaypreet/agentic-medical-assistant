@@ -1,0 +1,111 @@
+Disease: Anaemia (Anemia)
+Source: WHO Fact Sheet on Anaemia (Updated February 2025)
+
+DESCRIPTION:
+Anaemia is a condition in which the number of red blood cells, or the concentration of haemoglobin within them, falls below normal levels needed to meet the body's physiological requirements. Haemoglobin carries oxygen from the lungs to the rest of the body — when there is insufficient haemoglobin, organs and tissues receive less oxygen, causing the classic symptoms of fatigue and weakness. Anaemia is not a disease itself, but a sign of an underlying condition. It is the world's most common blood disorder and a major global public health problem.
+
+WHO GLOBAL FACTS (2025):
+- Anaemia is estimated to affect 40% of all children aged 6–59 months globally.
+- 37% of pregnant women and 30% of women aged 15–49 are affected worldwide.
+- About 269 million children and over 500 million women of reproductive age are estimated to have anaemia.
+- Anaemia caused 50 million years of healthy life lost due to disability in 2019.
+- Africa and South-East Asia bear the highest burden.
+
+WHO IS MOST AT RISK?
+- Children under 5 years (especially under 2 years of age)
+- Pregnant and postpartum women
+- Adolescent girls and menstruating women
+- People in low- and middle-income countries with poor nutrition or high infection burden
+
+DIAGNOSIS:
+Anaemia is diagnosed by measuring haemoglobin (Hb) levels in the blood (from a CBC or dedicated Hb test):
+- Children 6–59 months: Hb < 11.0 g/dL
+- Children 5–11 years: Hb < 11.5 g/dL
+- Children 12–14 years: Hb < 12.0 g/dL
+- Non-pregnant women 15+: Hb < 12.0 g/dL
+- Pregnant women: Hb < 11.0 g/dL
+- Men 15+: Hb < 13.0 g/dL
+
+Severity:
+- Mild anaemia: Hb 10.0–11.9 g/dL (women) / 10.0–12.9 g/dL (men)
+- Moderate: Hb 7.0–9.9 g/dL
+- Severe: Hb < 7.0 g/dL
+
+SYMPTOMS:
+Mild anaemia:
+- Fatigue and tiredness
+- Reduced ability to exercise or do physical work
+- Difficulty concentrating
+
+Moderate to severe anaemia:
+- Shortness of breath, especially on exertion
+- Dizziness or light-headedness
+- Cold hands and feet
+- Headache
+- Pale skin, pale inner eyelids, pale gums (mucous membranes)
+- Rapid heartbeat (tachycardia)
+- Brittle nails
+- Chest pain in severe cases
+
+CAUSES:
+1. Nutritional deficiencies (most common cause worldwide):
+   - Iron deficiency: inadequate dietary intake, poor absorption, or blood loss — most common nutritional cause
+   - Vitamin B12 deficiency: inadequate diet (especially in vegetarians/vegans), malabsorption (pernicious anemia)
+   - Folate (Vitamin B9) deficiency: common in pregnancy, poor diet, alcohol excess
+   - Vitamin A deficiency: impairs iron metabolism
+
+2. Blood loss:
+   - Heavy menstrual periods (menorrhagia)
+   - Gastrointestinal bleeding (ulcers, colon cancer, hookworm)
+   - Trauma or surgery
+   - Postpartum hemorrhage
+
+3. Infections:
+   - Malaria: destroys red blood cells directly
+   - HIV: impairs RBC production and causes blood loss
+   - Tuberculosis and other chronic infections
+   - Hookworm, schistosomiasis (intestinal parasites that cause blood loss)
+
+4. Chronic diseases:
+   - Chronic kidney disease (reduced erythropoietin production)
+   - Cancer (especially leukemia, lymphoma, bone marrow disorders)
+   - Autoimmune diseases (lupus, rheumatoid arthritis)
+   - Inflammatory bowel disease
+
+5. Inherited red blood cell disorders:
+   - Sickle cell disease: abnormal haemoglobin shape causes RBC destruction
+   - Thalassaemia: reduced haemoglobin production due to gene mutations
+   - G6PD deficiency: enzyme disorder that leads to RBC breakdown
+
+PREVENTION:
+Dietary prevention:
+- Eat iron-rich foods: lean red meat, poultry, fish, lentils, beans, tofu, dark leafy greens (spinach, kale)
+- Eat vitamin C-rich foods alongside iron-rich foods to enhance iron absorption (e.g., lemon juice, orange juice, tomatoes)
+- Avoid drinking tea or coffee immediately after iron-rich meals (tannins reduce absorption)
+- Ensure adequate folate: leafy greens, legumes, fortified cereals
+- Ensure adequate B12: meat, fish, eggs, dairy; vegans may need supplements
+
+Other prevention strategies:
+- Treat and prevent malaria (especially in endemic regions)
+- Deworm children and pregnant women in areas with parasitic infections
+- Control heavy menstrual bleeding with appropriate medical treatment
+- Delay cord clamping by at least 1 minute after birth (increases iron stores in newborns)
+- Space pregnancies at least 24 months apart
+- Antenatal iron-folate supplementation during pregnancy
+
+TREATMENT:
+- Iron supplements: oral ferrous sulfate or ferrous gluconate (most common treatment for iron deficiency anemia)
+- B12 and folate supplementation for deficiency anemias
+- Treatment of underlying infections (malaria, hookworm)
+- Blood transfusion in severe or life-threatening anemia
+- Bone marrow transplant for sickle cell disease or severe thalassemia
+- Erythropoiesis-stimulating agents for anemia of chronic kidney disease
+
+IMPACT OF UNTREATED ANEMIA:
+- Poor academic performance in children (developmental delays, reduced attention)
+- Reduced work productivity in adults (economic impact)
+- Increased risk of maternal mortality during and after childbirth
+- Low birth weight and premature birth in pregnancies
+- Increased vulnerability to infections
+
+SOURCE: WHO Fact Sheet — Anaemia (https://www.who.int/news-room/fact-sheets/detail/anaemia) | Updated February 2025

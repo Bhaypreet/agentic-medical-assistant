@@ -1,0 +1,24 @@
+{
+    "id": "0346250c-d045-42b1-a6fb-a8532f5c3c19",
+    "chat_name": "New Chat",
+    "messages": [
+        {
+            "role": "user",
+            "content": "hii"
+        },
+        {
+            "role": "assistant",
+            "content": "Hello 👋 I am your AI Medical Assistant. I can help you with: • Medical Questions • Symptom Analysis • Blood Report Analysis • Chat with Uploaded Reports • Doctor Recommendations "
+        },
+        {
+            "role": "user",
+            "content": "bye"
+        },
+        {
+            "role": "assistant",
+            "content": "I'm happy to help! However, I noticed that there is no question or description provided. As a medical assistant, I can only respond based on the information given. Since there is no question or description, my response would be: \"I'm ready when you are! Please provide more context so I can assist you better.\" "
+        }
+    ],
+    "report": null,
+    "summary": ""
+}

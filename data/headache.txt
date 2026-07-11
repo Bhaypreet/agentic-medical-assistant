@@ -1,0 +1,68 @@
+Disease: Headache (including Migraine)
+Source: WHO Fact Sheet on Migraine and Other Headache Disorders / General Medical Knowledge
+
+DESCRIPTION:
+Headache is one of the most common disorders of the nervous system and is felt as pain in any region of the head. It can occur on one or both sides of the head, be isolated to a specific location, or radiate across the head from one point. Headaches range from a mild nuisance to a debilitating condition. According to WHO, headache disorders are among the most prevalent neurological conditions globally. They are classified as primary (not caused by another condition) or secondary (caused by an underlying illness or injury).
+
+WHO GLOBAL FACTS:
+- Headache disorders are among the most widespread disorders of the nervous system worldwide.
+- They cause significant disability, affecting people's ability to work and function in daily life.
+- Migraine alone is the third most prevalent illness globally and the second most disabling neurological condition.
+- Despite this, headache disorders remain under-diagnosed and under-treated worldwide.
+
+TYPES OF HEADACHE:
+1. Tension-type headache (TTH): Most common type. Causes a dull, aching pressure around the head, often described as a tight band. Triggered by stress, poor posture, lack of sleep, or eye strain.
+2. Migraine: A severe, often one-sided, throbbing headache lasting 4–72 hours. Often accompanied by nausea, vomiting, and sensitivity to light and sound. Some people experience an "aura" (visual disturbances) before the headache.
+3. Cluster headache: Extremely painful headaches occurring in clusters (groups) over weeks or months. Pain is typically around one eye and may be accompanied by tearing, nasal congestion, or a drooping eyelid.
+4. Secondary headache: Caused by another condition such as infection, hypertension, head injury, medication overuse, or a brain tumor.
+
+SYMPTOMS:
+- Tension-type: Pressing or tightening pain, both sides of head, mild to moderate intensity
+- Migraine: Throbbing or pulsating pain (usually one side), nausea, vomiting, sensitivity to light (photophobia) and sound (phonophobia), visual aura in some cases
+- Cluster: Severe stabbing pain around or behind one eye, redness or tearing in the eye, runny nose on affected side
+- Secondary headache: Pain associated with other symptoms like fever, neck stiffness, vision changes, neurological signs
+
+CAUSES:
+Primary headaches:
+- Stress, anxiety, and tension
+- Hormonal changes (especially in women — menstruation, pregnancy, menopause)
+- Sleep disturbances
+- Skipping meals or dehydration
+- Alcohol and caffeine (or withdrawal from caffeine)
+- Strong smells, bright lights, loud noise
+- Genetics (migraines run in families)
+
+Secondary headaches:
+- Infections (meningitis, sinusitis, ear infections)
+- High blood pressure (hypertension)
+- Medication overuse (rebound headaches)
+- Head injury or concussion
+- Brain tumors (rare)
+- Glaucoma or other eye conditions
+
+PREVENTION:
+- Maintain regular sleep and wake times
+- Stay hydrated and eat regular meals
+- Manage stress through relaxation, yoga, or mindfulness
+- Limit alcohol and caffeine
+- Take regular breaks from screens (the "20-20-20 rule": every 20 minutes, look 20 feet away for 20 seconds)
+- Keep a headache diary to identify and avoid personal triggers
+
+TREATMENT:
+- Over-the-counter pain relief: paracetamol (acetaminophen), ibuprofen, aspirin (not for children)
+- Triptans (for migraines): sumatriptan and similar drugs that constrict blood vessels
+- Rest in a dark, quiet room during migraine attacks
+- Anti-nausea medications for migraine-associated vomiting
+- Preventive medications for chronic migraines: beta-blockers, anticonvulsants, antidepressants
+- Biofeedback and cognitive behavioural therapy (CBT) for chronic headache management
+- Avoiding known triggers is the most effective long-term management strategy
+
+SEEK MEDICAL ATTENTION IF:
+- The headache is the "worst headache of your life" (may indicate subarachnoid hemorrhage — emergency)
+- Headache accompanied by fever, stiff neck, rash, confusion (may indicate meningitis)
+- Sudden onset ("thunderclap headache")
+- Headache following a head injury
+- Progressively worsening headache over days/weeks
+- Associated with neurological symptoms: weakness, vision loss, difficulty speaking
+
+SOURCE: WHO Fact Sheet — Migraine and Other Headache Disorders (https://www.who.int/news-room/fact-sheets/detail/headache-disorders) | General Clinical Medicine

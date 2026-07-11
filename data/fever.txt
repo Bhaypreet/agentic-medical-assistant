@@ -1,0 +1,66 @@
+Disease: Fever
+Source: WHO / General Medical Knowledge
+
+DESCRIPTION:
+Fever is a temporary increase in body temperature above the normal range (typically above 38°C / 100.4°F), most often triggered by the body's immune response to infection. It is not a disease itself, but a symptom signaling that the body is fighting something — usually an infection caused by bacteria, viruses, or other pathogens. Fever is one of the oldest and most reliable signs that something is wrong inside the body, and is the result of pyrogens (fever-causing substances) stimulating the brain's hypothalamus to raise the body's thermostat.
+
+NORMAL BODY TEMPERATURE:
+The average normal body temperature is around 37°C (98.6°F), but it can range from 36.1°C to 37.2°C depending on the time of day, age, and method of measurement. A temperature above 38°C (100.4°F) is generally considered a fever.
+
+SYMPTOMS:
+- High body temperature (above 38°C / 100.4°F)
+- Chills and shivering (as the body tries to generate heat)
+- Sweating (as the body tries to cool down)
+- Headache
+- Muscle aches and general body weakness
+- Loss of appetite
+- Dehydration
+- In children: irritability and crying, febrile seizures (in rare cases)
+
+CAUSES:
+- Viral infections: influenza (flu), common cold, COVID-19, dengue
+- Bacterial infections: urinary tract infections, pneumonia, ear infections, throat infections
+- Parasitic infections: malaria (a major cause in tropical regions)
+- Inflammatory conditions: arthritis, inflammatory bowel disease
+- Heat exhaustion or heat stroke
+- Certain medications (drug-induced fever)
+- Immunizations (mild fever is a normal immune response to vaccines)
+
+TYPES:
+- Low-grade fever: 38°C–38.5°C (100.4°F–101.3°F) — common with mild infections
+- Moderate fever: 38.6°C–39.4°C (101.5°F–103°F) — body fighting a stronger infection
+- High fever: Above 39.4°C (103°F) — requires medical attention
+- Hyperpyrexia: Above 41.1°C (106°F) — medical emergency
+
+DIAGNOSIS:
+Fever is measured using a thermometer (oral, rectal, axillary, or ear/temporal). A rectal measurement is the most accurate, especially in young children. Doctors may also run blood tests, urine tests, or cultures to find the underlying cause.
+
+PREVENTION:
+- Wash hands frequently with soap and water
+- Stay up to date on vaccinations (influenza, COVID-19, etc.)
+- Avoid close contact with sick individuals
+- Maintain good hygiene and food safety practices
+- Stay hydrated, especially in hot weather
+- Use mosquito nets and repellents in malaria-prone regions
+
+TREATMENT:
+- Rest and stay well hydrated (water, oral rehydration salts)
+- Take antipyretic medications such as paracetamol (acetaminophen) or ibuprofen to reduce fever and discomfort
+- Use a damp cloth on the forehead for comfort
+- Dress lightly and keep the room cool
+- For bacterial infections, a doctor may prescribe antibiotics
+- Avoid aspirin in children under 18 (risk of Reye's syndrome)
+
+SEEK MEDICAL ATTENTION IF:
+- Fever exceeds 39.4°C (103°F) in adults or 38°C (100.4°F) in infants under 3 months
+- Fever lasts more than 3 days without improvement
+- Difficulty breathing or chest pain develops
+- Severe headache, stiff neck, or skin rash appears
+- Signs of dehydration: dry mouth, no urination, extreme thirst
+- Confusion, seizures, or loss of consciousness occur
+- Person has a weakened immune system or chronic illness
+
+GLOBAL CONTEXT (WHO):
+Fever is among the most common reasons people seek medical care globally. In low- and middle-income countries, fever in children is a leading cause of healthcare visits and is often linked to malaria, which kills hundreds of thousands of children each year. WHO recommends early diagnosis and prompt treatment as key strategies to reduce fever-related mortality.
+
+SOURCE: WHO Fact Sheets (https://www.who.int/news-room/fact-sheets) | General Clinical Medicine

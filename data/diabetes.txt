@@ -1,0 +1,71 @@
+Disease: Diabetes
+Source: WHO Fact Sheet on Diabetes (Updated November 2024)
+
+DESCRIPTION:
+Diabetes is a chronic, long-lasting disease that occurs either when the pancreas does not produce enough insulin, or when the body cannot effectively use the insulin it produces. Insulin is a hormone that regulates blood glucose (blood sugar). When insulin is absent or ineffective, glucose remains in the bloodstream instead of being absorbed into cells for energy, leading to hyperglycaemia (high blood sugar). Over time, persistently high blood glucose causes serious damage to nerves, blood vessels, and multiple organ systems throughout the body.
+
+WHO GLOBAL FACTS (2024):
+- The number of people living with diabetes rose from 200 million in 1990 to 830 million in 2022.
+- Prevalence has been rising more rapidly in low- and middle-income countries.
+- More than half (59%) of people with diabetes did not take medication for their condition in 2022.
+- In 2021, diabetes was the direct cause of 1.6 million deaths; 47% of all diabetes-related deaths occurred before age 70.
+- An additional 530,000 kidney disease deaths were caused by diabetes, and high blood glucose accounts for approximately 11% of cardiovascular deaths.
+
+TYPES OF DIABETES:
+1. Type 1 Diabetes: The pancreas produces little to no insulin. The immune system attacks and destroys the insulin-producing beta cells. Requires daily insulin injections for survival. Often diagnosed in children and young adults. Cause is unknown; cannot currently be prevented.
+2. Type 2 Diabetes: The body does not use insulin effectively (insulin resistance). Accounts for over 95% of all diabetes cases. Often preventable through lifestyle changes. Can progress slowly over years before diagnosis. Risk increases with obesity, physical inactivity, poor diet, and family history.
+3. Gestational Diabetes: High blood glucose that develops during pregnancy and usually resolves after birth. Increases the risk of type 2 diabetes later in life for both mother and child. Diagnosed through prenatal screening.
+4. Pre-diabetes (Impaired Glucose Tolerance / Impaired Fasting Glycaemia): Blood glucose levels are higher than normal but not yet in the diabetic range. High risk of progressing to type 2 diabetes but can be reversed with lifestyle changes.
+
+SYMPTOMS:
+- Feeling very thirsty (polydipsia)
+- Needing to urinate more frequently, especially at night (polyuria)
+- Unexplained weight loss
+- Blurred vision
+- Extreme fatigue
+- Slow-healing wounds or cuts
+- Tingling, numbness, or pain in the hands or feet
+- Frequent infections (skin, gum, bladder)
+Note: Type 2 diabetes symptoms can be very mild and develop slowly over years; many people are undiagnosed.
+
+LONG-TERM COMPLICATIONS:
+- Cardiovascular disease: heart attack, stroke (leading cause of death in diabetics)
+- Diabetic retinopathy: damage to blood vessels in the eyes, leading to blindness
+- Diabetic nephropathy: kidney damage, potentially leading to kidney failure
+- Diabetic neuropathy: nerve damage causing numbness, pain, and foot ulcers
+- Lower limb amputation: due to poor circulation and nerve damage in the feet
+- Increased susceptibility to infections
+
+CAUSES AND RISK FACTORS:
+- Type 1: Genetic predisposition + unknown environmental trigger (possibly viral)
+- Type 2: Obesity/overweight, physical inactivity, unhealthy diet (high in sugar/saturated fat), family history, age (over 45), ethnicity (higher risk in South Asian, African, and Hispanic populations), previous gestational diabetes
+
+PREVENTION (Type 2):
+- Maintain a healthy body weight (BMI 18.5–24.9)
+- Be physically active: at least 150 minutes of moderate exercise per week
+- Eat a balanced, healthy diet: rich in vegetables, whole grains, lean protein; low in sugar and saturated fats
+- Avoid tobacco use
+- Limit alcohol consumption
+- Regular blood sugar screening for high-risk individuals
+
+DIAGNOSIS:
+- Fasting blood glucose test: ≥7.0 mmol/L (126 mg/dL) on two occasions = diabetes
+- HbA1c (glycated haemoglobin) test: ≥6.5% = diabetes; shows average blood sugar over 3 months
+- Oral glucose tolerance test (OGTT)
+- Random blood glucose: ≥11.1 mmol/L (200 mg/dL) with symptoms
+
+TREATMENT:
+- Type 1: Daily insulin injections or insulin pump, blood glucose monitoring, carbohydrate counting
+- Type 2: Lifestyle changes (diet + exercise), oral medications (metformin, sulfonylureas, SGLT-2 inhibitors), insulin if needed
+- Blood pressure and cholesterol medications to reduce cardiovascular risk
+- Regular screening for complications: eye exams, kidney function tests, foot checks
+- Diabetes self-management education
+
+SEEK MEDICAL ATTENTION IF:
+- Blood sugar is consistently very high or very low (hypoglycemia)
+- Symptoms of diabetic ketoacidosis (DKA): nausea, vomiting, abdominal pain, fruity breath, rapid breathing — this is a medical emergency
+- Foot wounds that do not heal
+- Sudden vision changes
+- Chest pain or shortness of breath
+
+SOURCE: WHO Fact Sheet — Diabetes (https://www.who.int/news-room/fact-sheets/detail/diabetes) | Updated November 2024

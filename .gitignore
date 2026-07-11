@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+uploads/
+vectorstore/
+report_vectorstore/
+sessions_store.json
+frontendv2/sessions/
+venv/
+.venv/

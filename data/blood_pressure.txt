@@ -1,0 +1,87 @@
+Disease: Hypertension (High Blood Pressure)
+Source: WHO Fact Sheet on Hypertension / General Medical Knowledge
+
+DESCRIPTION:
+Hypertension, commonly known as high blood pressure, is a condition in which the force of blood against the artery walls is consistently too high. It is measured using two numbers: systolic pressure (the pressure when the heart beats) over diastolic pressure (the pressure when the heart rests between beats), expressed in millimeters of mercury (mmHg). A blood pressure reading of 140/90 mmHg or higher on two separate occasions is classified as hypertension. It is called the "silent killer" because it often has no symptoms yet significantly increases the risk of heart attack, stroke, kidney failure, and other serious conditions.
+
+WHO GLOBAL FACTS:
+- Approximately 1.28 billion adults aged 30–79 years worldwide have hypertension.
+- About 46% of adults with hypertension are unaware they have it.
+- Only about 42% of adults with hypertension are diagnosed and treated.
+- Around 21% of adults with hypertension have their blood pressure under control.
+- Hypertension is a major cause of premature death worldwide.
+- Low- and middle-income countries bear the greatest burden of hypertension.
+
+BLOOD PRESSURE CATEGORIES:
+- Normal: Less than 120/80 mmHg
+- Elevated: 120–129 / less than 80 mmHg
+- Stage 1 Hypertension: 130–139 / 80–89 mmHg
+- Stage 2 Hypertension: 140/90 mmHg or higher
+- Hypertensive Crisis: Above 180/120 mmHg (emergency requiring immediate care)
+
+SYMPTOMS:
+Most people with hypertension have no symptoms, which is why regular monitoring is essential. When symptoms do occur (usually in severe hypertension), they may include:
+- Severe headache (often at the back of the head, worse in the morning)
+- Blurred or double vision
+- Nosebleeds
+- Chest pain
+- Shortness of breath
+- Fatigue or confusion
+- Irregular heartbeat
+Note: Waiting for symptoms is dangerous — hypertension must be detected through regular blood pressure measurement.
+
+CAUSES:
+Primary (Essential) Hypertension (90–95% of cases):
+- No single identifiable cause
+- Develops gradually over years
+- Associated with lifestyle and genetic factors
+
+Secondary Hypertension (5–10% of cases):
+- Caused by an underlying condition: kidney disease, hormonal disorders (e.g., Conn's syndrome, Cushing's syndrome, thyroid problems), sleep apnoea, certain medications (NSAIDs, birth control pills, decongestants)
+
+RISK FACTORS:
+- Obesity or overweight
+- Physical inactivity
+- High-sodium (salty) diet
+- Low potassium intake
+- Excessive alcohol consumption
+- Tobacco use (smoking or chewing)
+- Chronic stress
+- Family history of hypertension
+- Older age (arteries stiffen with age)
+- Diabetes and chronic kidney disease
+
+COMPLICATIONS IF UNTREATED:
+- Heart attack and heart failure
+- Stroke (leading cause of disability)
+- Chronic kidney disease and kidney failure
+- Peripheral artery disease
+- Vision loss (hypertensive retinopathy)
+- Aneurysm (bulging in blood vessel walls)
+- Cognitive decline and dementia
+
+PREVENTION:
+- Reduce salt (sodium) intake: less than 5g per day (about 1 teaspoon)
+- Eat a diet rich in fruits, vegetables, and whole grains (DASH diet)
+- Exercise regularly: at least 150 minutes of moderate activity per week
+- Achieve and maintain a healthy weight
+- Limit alcohol: no more than 1 drink/day for women, 2 drinks/day for men
+- Quit smoking
+- Manage stress through relaxation techniques, sleep hygiene, meditation
+- Monitor blood pressure regularly, especially if at risk
+
+TREATMENT:
+Lifestyle changes are the first line of treatment. Medications are prescribed when blood pressure remains high:
+- Diuretics (thiazides): help kidneys remove excess sodium and water
+- ACE inhibitors: relax blood vessels (e.g., enalapril, lisinopril)
+- Angiotensin receptor blockers (ARBs): similar to ACE inhibitors (e.g., losartan)
+- Calcium channel blockers: prevent calcium from entering heart and artery cells (e.g., amlodipine)
+- Beta-blockers: reduce heart rate and output (e.g., atenolol, metoprolol)
+Most patients need more than one medication. Lifelong treatment is usually required.
+
+SEEK MEDICAL ATTENTION IF:
+- Blood pressure reading is above 180/120 mmHg (hypertensive crisis)
+- Accompanied by chest pain, shortness of breath, back pain, or neurological symptoms
+- Sudden severe headache, vision changes, or loss of consciousness
+
+SOURCE: WHO Fact Sheet — Hypertension (https://www.who.int/news-room/fact-sheets/detail/hypertension) | General Clinical Medicine
