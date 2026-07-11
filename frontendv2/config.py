@@ -1,4 +1,4 @@
-FASTAPI_URL = "http://127.0.0.1:8000"
+FASTAPI_URL = "https://agentic-medical-assistant.onrender.com"
 
 APP_NAME = "🩺 Agentic Medical Assistant"
 
