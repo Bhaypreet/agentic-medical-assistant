@@ -9,9 +9,6 @@ from reportlab.platypus import (
 )
 
 
-# Characters that Helvetica (PDF's default font) can't render show up as
-# black boxes ("■"). We normalize them to safe ASCII equivalents instead
-# of needing to bundle a custom Unicode font.
 _CHAR_REPLACEMENTS = {
     "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-", "\u2014": "-",
     "\u2212": "-", "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
@@ -35,11 +32,25 @@ def _sanitize(text: str) -> str:
 
     text = _EMOJI_PATTERN.sub("", text)
 
+    # neutralize ANY raw HTML/XML-like tags the LLM might have written
+    # (e.g. stray "<br>" inside a markdown table cell) - ReportLab's
+    # Paragraph parser treats these as real tags and crashes if they're
+    # malformed. Escaping here means our OWN <b> tags (added later) are
+    # the only real tags that ever reach ReportLab.
+    text = text.replace("&", "&amp;")
+    text = text.replace("<", "&lt;").replace(">", "&gt;")
+
+    # markdown table rows (LLM sometimes writes "| Diet | tips |") don't
+    # render as tables here - convert pipes into a readable dash-separated line
+    if text.count("|") >= 2:
+        parts = [p.strip() for p in text.split("|") if p.strip()]
+        text = " - ".join(parts)
+
     return text.strip()
 
 
 def _markdown_bold_to_html(text: str) -> str:
-    # **bold** -> <b>bold</b>  (reportlab's Paragraph understands basic <b> tags)
+    # applied AFTER _sanitize, so these are the only real tags ReportLab sees
     return re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text)
 
 
@@ -50,7 +61,6 @@ def _is_heading(line: str) -> bool:
     if stripped.startswith("#"):
         return True
 
-    # short, title-like lines ending with ":" (e.g. "Overall Summary:")
     if len(stripped) < 40 and stripped.endswith(":") and not stripped.startswith("-"):
         return True
 
@@ -58,6 +68,9 @@ def _is_heading(line: str) -> bool:
 
 
 def generate_report_pdf(summary_text: str, analysis: list) -> bytes:
+
+    summary_text = summary_text or "No summary available."
+    analysis = analysis or []
 
     buffer = BytesIO()
 
@@ -104,19 +117,30 @@ def generate_report_pdf(summary_text: str, analysis: list) -> bytes:
             continue
 
         line = _sanitize(line)
+
+        if not line:
+            continue
+
         line = _markdown_bold_to_html(line)
 
-        if _is_heading(line):
-            clean_heading = line.lstrip("#").strip().rstrip(":")
-            elements.append(Paragraph(clean_heading, heading_style))
-            continue
+        try:
+            if _is_heading(line):
+                clean_heading = line.lstrip("#").strip().rstrip(":")
+                elements.append(Paragraph(clean_heading, heading_style))
+                continue
 
-        if line.startswith(("-", "*", "\u2022")):
-            bullet_text = line.lstrip("-*\u2022").strip()
-            elements.append(Paragraph(f"\u2022 {bullet_text}", bullet_style))
-            continue
+            if line.startswith(("-", "*", "\u2022")):
+                bullet_text = line.lstrip("-*\u2022").strip()
+                elements.append(Paragraph(f"\u2022 {bullet_text}", bullet_style))
+                continue
 
-        elements.append(Paragraph(line, body_style))
+            elements.append(Paragraph(line, body_style))
+
+        except Exception:
+            # last-resort safety net: never let one bad line crash the
+            # whole PDF - fall back to fully plain, tag-free text
+            plain = re.sub(r"<[^>]*>", "", line)
+            elements.append(Paragraph(plain, body_style))
 
     elements.append(Spacer(1, 20))
     elements.append(Paragraph("Detailed Lab Values", heading_style))
