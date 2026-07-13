@@ -15,7 +15,12 @@ from app.rag.chain import medical_rag
 
 from app.agents.report_agent import report_agent
 from app.agents.report_chat_agent import report_chat_agent
+from app.agents.diet_agents import diet_agent
 
+
+# =====================================================
+# STATE
+# =====================================================
 
 class MedicalState(TypedDict):
     query: str
@@ -36,6 +41,10 @@ class MedicalState(TypedDict):
     chat_history: list
 
 
+# =====================================================
+# SUPERVISOR
+# =====================================================
+
 def supervisor_node(state: MedicalState):
 
     return classify_intent(
@@ -44,6 +53,10 @@ def supervisor_node(state: MedicalState):
         pdf_path=state["pdf_path"]
     )
 
+
+# =====================================================
+# GREETING
+# =====================================================
 
 def greeting_node(state: MedicalState):
 
@@ -58,6 +71,7 @@ I can help you with:
 - Medical Questions
 - Symptom Analysis
 - Blood Report Analysis (PDF or photo)
+- Diet & Nutrition Plans
 - Chat with Uploaded Reports
 - Doctor Recommendations
 """
@@ -79,8 +93,9 @@ def ask_clarification_node(state: MedicalState):
     prompt = f"""A patient just said: "{query}"
 
 Ask exactly ONE short, natural follow-up question a doctor would ask before
-triaging this. Respond in the SAME language the patient used. Return ONLY
-the question, nothing else."""
+triaging this (e.g. how long, severity 1-10, any other symptoms). Respond
+in the SAME language the patient used. Return ONLY the question, nothing
+else."""
 
     try:
         question = safe_invoke(prompt).content.strip()
@@ -122,6 +137,10 @@ Reason:
     }
 
 
+# =====================================================
+# MEDICAL RAG (general questions)
+# =====================================================
+
 def rag_node(state: MedicalState):
 
     answer = medical_rag(
@@ -131,6 +150,26 @@ def rag_node(state: MedicalState):
 
     return {"response": answer}
 
+
+# =====================================================
+# DIET / NUTRITION AGENT
+# =====================================================
+
+def diet_node(state: MedicalState):
+
+    answer = diet_agent(
+        session_id=state["session_id"],
+        query=state["query"],
+        chat_history=state.get("chat_history", [])
+    )
+
+    return {"response": answer}
+
+
+# =====================================================
+# ASK FOR LOCATION
+# (severity is high, but we don't have a location yet)
+# =====================================================
 
 def ask_location_node(state: MedicalState):
 
@@ -146,6 +185,10 @@ def ask_location_node(state: MedicalState):
     }
 
 
+# =====================================================
+# DOCTOR FINDER (severity high + location already given)
+# =====================================================
+
 def doctor_node(state: MedicalState):
 
     specialist = state["specialist"]
@@ -158,6 +201,11 @@ def doctor_node(state: MedicalState):
 
     return {"response": _format_doctor_response(doctors, specialist)}
 
+
+# =====================================================
+# RESUME DOCTOR FINDER
+# (user just replied with their location after being asked)
+# =====================================================
 
 def resume_doctor_node(state: MedicalState):
 
@@ -185,6 +233,13 @@ def resume_doctor_node(state: MedicalState):
 
     return {"response": _format_doctor_response(doctors, specialist)}
 
+
+# =====================================================
+# EXPLICIT HOSPITAL/DOCTOR SEARCH
+# (user directly asks "hospitals near X" / "doctor near me" etc,
+# with no prior severity flow - always uses the real Maps tool,
+# never lets the LLM invent names)
+# =====================================================
 
 _GENERIC_TERMS = {
     "hospital", "hospitals", "doctor", "doctors", "clinic", "clinics",
@@ -259,6 +314,10 @@ def _format_doctor_response(doctors, specialist):
     return response
 
 
+# =====================================================
+# REPORT UPLOAD
+# =====================================================
+
 def report_node(state: MedicalState):
 
     result = report_agent(
@@ -272,6 +331,10 @@ def report_node(state: MedicalState):
     }
 
 
+# =====================================================
+# REPORT CHAT
+# =====================================================
+
 def report_chat_node(state: MedicalState):
 
     answer = report_chat_agent(
@@ -283,6 +346,10 @@ def report_chat_node(state: MedicalState):
     return {"response": answer}
 
 
+# =====================================================
+# SEVERITY ROUTER
+# =====================================================
+
 def severity_router(state: MedicalState):
 
     if state["severity"] <= 2:
@@ -292,18 +359,29 @@ def severity_router(state: MedicalState):
     return "ask_location"
 
 
+# =====================================================
+# GRAPH
+# =====================================================
+
 graph_builder = StateGraph(MedicalState)
+
+
+# ---------------- Nodes ----------------
 
 graph_builder.add_node("greeting_node", greeting_node)
 graph_builder.add_node("ask_clarification_node", ask_clarification_node)
 graph_builder.add_node("clarify_answer_node", clarify_answer_node)
 graph_builder.add_node("rag_node", rag_node)
+graph_builder.add_node("diet_node", diet_node)
 graph_builder.add_node("doctor_node", doctor_node)
 graph_builder.add_node("ask_location_node", ask_location_node)
 graph_builder.add_node("resume_doctor_node", resume_doctor_node)
 graph_builder.add_node("hospital_search_node", hospital_search_node)
 graph_builder.add_node("report_node", report_node)
 graph_builder.add_node("report_chat_node", report_chat_node)
+
+
+# ---------------- Start Routing ----------------
 
 graph_builder.add_conditional_edges(
     START,
@@ -316,9 +394,13 @@ graph_builder.add_conditional_edges(
         "report_chat": "report_chat_node",
         "provide_location": "resume_doctor_node",
         "hospital_search": "hospital_search_node",
+        "diet": "diet_node",
         "general": "rag_node"
     }
 )
+
+
+# ---------------- Severity Routing (after clarification) ----------------
 
 graph_builder.add_conditional_edges(
     "clarify_answer_node",
@@ -330,14 +412,19 @@ graph_builder.add_conditional_edges(
     }
 )
 
+
+# ---------------- End ----------------
+
 graph_builder.add_edge("greeting_node", END)
 graph_builder.add_edge("ask_clarification_node", END)
 graph_builder.add_edge("rag_node", END)
+graph_builder.add_edge("diet_node", END)
 graph_builder.add_edge("doctor_node", END)
 graph_builder.add_edge("ask_location_node", END)
 graph_builder.add_edge("resume_doctor_node", END)
 graph_builder.add_edge("hospital_search_node", END)
 graph_builder.add_edge("report_node", END)
 graph_builder.add_edge("report_chat_node", END)
+
 
 graph = graph_builder.compile()

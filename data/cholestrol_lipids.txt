@@ -1,0 +1,33 @@
+Cholesterol and Lipid Profile
+
+A lipid panel measures fats in the blood that affect cardiovascular risk.
+
+Components and Normal Ranges (adult, fasting):
+- Total Cholesterol: below 200 mg/dL desirable
+- LDL ("bad" cholesterol): below 100 mg/dL optimal
+- HDL ("good" cholesterol): above 60 mg/dL is protective (below 40 is low)
+- Triglycerides: below 150 mg/dL normal
+
+Interpretation:
+- High LDL increases risk of plaque buildup in arteries (atherosclerosis),
+  raising heart attack and stroke risk.
+- Low HDL means less "cleanup" of excess cholesterol from arteries.
+- High Triglycerides are linked to poor diet (excess sugar/refined carbs,
+  alcohol), diabetes, and metabolic syndrome; very high levels can also
+  cause pancreatitis.
+- Borderline values (LDL 100-129, Triglycerides 150-199) suggest lifestyle
+  changes are needed before medication is typically considered.
+
+Management:
+- Diet: reduce saturated/trans fats, increase soluble fiber (oats, beans),
+  add omega-3 rich foods (fatty fish, walnuts, flaxseed), limit refined
+  sugar and alcohol.
+- Exercise: regular aerobic activity raises HDL and lowers triglycerides.
+- Weight management: even 5-10% weight loss can meaningfully improve lipid
+  numbers.
+- Medication: statins are the most common LDL-lowering medication when
+  lifestyle changes aren't enough, especially with additional cardiovascular
+  risk factors.
+
+Severity Note: Triglycerides above 500 mg/dL carry a risk of acute
+pancreatitis and need prompt medical attention.

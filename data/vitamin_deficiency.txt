@@ -1,0 +1,34 @@
+Vitamin D and Vitamin B12 Deficiency
+
+Vitamin D:
+- Function: supports calcium absorption, bone health, immune function, and
+  mood regulation.
+- Normal range: 25(OH)D level of 30-100 ng/mL is considered sufficient.
+- Deficient: below 20 ng/mL. Severely deficient: below 10 ng/mL.
+- Symptoms of deficiency: fatigue, bone/muscle pain, frequent infections,
+  low mood, hair loss in severe cases.
+- Causes: limited sun exposure, darker skin (needs more sun for same
+  synthesis), obesity, malabsorption conditions, older age.
+- Treatment: Vitamin D3 supplementation (dose depends on severity - mild
+  deficiency often 1000-2000 IU/day, severe deficiency may need higher
+  doctor-prescribed doses), 10-15 minutes of midday sun exposure a few
+  times a week, foods like fatty fish, egg yolks, fortified milk.
+
+Vitamin B12:
+- Function: essential for nerve function, red blood cell formation, and DNA
+  synthesis.
+- Normal range: typically 200-900 pg/mL (varies by lab).
+- Deficient: below 200 pg/mL, though symptoms can appear even at
+  "low-normal" levels.
+- Symptoms of deficiency: fatigue, weakness, numbness/tingling in
+  hands/feet, memory problems, pale skin, glossitis (sore tongue).
+- Causes: vegetarian/vegan diet (B12 is mainly found in animal products),
+  pernicious anemia (autoimmune, affects absorption), gastric surgery,
+  long-term use of certain medications (e.g. metformin, PPIs).
+- Treatment: oral B12 supplements (1000 mcg/day) for mild cases, or
+  intramuscular B12 injections for severe deficiency or absorption issues.
+  Dietary sources: meat, fish, eggs, dairy, fortified cereals.
+
+Note: Elevated homocysteine levels are often linked to B12 and folate
+deficiency, and are associated with increased cardiovascular risk if left
+unaddressed. Correcting B12/folate deficiency typically lowers homocysteine.

@@ -1,0 +1,33 @@
+Thyroid Function (TSH, T3, T4)
+
+The thyroid gland produces hormones that regulate metabolism, energy, and body
+temperature. TSH (Thyroid Stimulating Hormone) is the primary screening test.
+
+Normal Ranges (adult):
+- TSH: 0.4 - 4.0 mIU/L (some labs use 0.4 - 4.5)
+- Free T4: 0.8 - 1.8 ng/dL
+- Free T3: 2.3 - 4.2 pg/mL
+
+Interpretation:
+- High TSH + Low T4 = Hypothyroidism (underactive thyroid). Symptoms: fatigue,
+  weight gain, cold intolerance, dry skin, constipation, depression.
+- Low TSH + High T4 = Hyperthyroidism (overactive thyroid). Symptoms: weight
+  loss, rapid heartbeat, anxiety, heat intolerance, tremors.
+- Normal TSH = Thyroid function is currently balanced.
+
+Common Causes:
+- Hypothyroidism: Hashimoto's thyroiditis (autoimmune), iodine deficiency,
+  certain medications, post-thyroid surgery.
+- Hyperthyroidism: Graves' disease (autoimmune), thyroid nodules, thyroiditis.
+
+Management:
+- Hypothyroidism is typically treated with daily levothyroxine (synthetic
+  thyroid hormone), with periodic TSH monitoring to adjust dose.
+- Hyperthyroidism treatment depends on cause - may include anti-thyroid
+  medications, radioactive iodine, or surgery in some cases.
+- Diet: adequate iodine (iodized salt, seafood) supports thyroid function,
+  but excessive iodine can worsen some thyroid conditions - consult a doctor.
+
+Severity Note: Very high or very low TSH with symptoms like severe fatigue,
+confusion, extremely slow/fast heart rate, or swelling can indicate a
+thyroid emergency (myxedema coma or thyroid storm) - seek immediate care.

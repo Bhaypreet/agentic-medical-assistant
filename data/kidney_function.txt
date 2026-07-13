@@ -1,0 +1,40 @@
+Kidney Function Tests (Creatinine, eGFR, Microalbumin)
+
+Creatinine:
+- A waste product filtered by the kidneys; blood levels rise when kidney
+  function declines.
+- Normal range: approximately 0.6-1.2 mg/dL (varies slightly by lab, sex,
+  and muscle mass).
+- eGFR (estimated Glomerular Filtration Rate), calculated from creatinine,
+  age, and sex, is a more direct measure of kidney function:
+  - Above 90: normal
+  - 60-89: mildly reduced (often normal for older adults)
+  - 30-59: moderately reduced - monitor and address causes
+  - Below 30: severely reduced - needs nephrology care
+  - Below 15: kidney failure
+
+Microalbumin (urine):
+- Detects small amounts of protein leaking into urine - an early marker of
+  kidney damage, especially important in diabetes and hypertension.
+- Normal: below 30 mg/g creatinine (or below 16.7-20 mg/L depending on lab).
+- Elevated microalbumin can be an early warning sign before creatinine rises,
+  making it valuable for catching kidney issues early.
+
+Common Causes of Reduced Kidney Function:
+- Diabetes (diabetic nephropathy) - the leading cause globally
+- High blood pressure (hypertensive nephropathy)
+- Chronic dehydration, certain medications (long-term NSAID use)
+- Kidney stones, infections, or structural issues
+
+Management:
+- Control underlying conditions: tight blood sugar and blood pressure
+  control significantly slow kidney damage progression.
+- Stay well hydrated, but avoid excessive protein and salt intake if kidney
+  function is reduced.
+- Avoid unnecessary NSAIDs (ibuprofen, etc.) if kidney function is impaired.
+- Regular monitoring (creatinine, eGFR, microalbumin) especially for
+  diabetics and hypertensive patients.
+
+Severity Note: Rapidly rising creatinine, very low urine output, or
+swelling with shortness of breath can indicate acute kidney injury - this
+needs urgent medical evaluation.

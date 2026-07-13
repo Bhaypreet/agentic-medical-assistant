@@ -1,0 +1,40 @@
+Inflammation and Blood Cell Markers (WBC, Neutrophils, MPV, Homocysteine)
+
+WBC (White Blood Cell) Count:
+- Normal range: approximately 4,000-10,000 /cmm
+- High (leukocytosis): can indicate infection, inflammation, stress
+  response, or less commonly a blood disorder. Mild elevation is often
+  benign and resolves on its own.
+- Low (leukopenia): can indicate viral infection, bone marrow issues, or
+  certain medications.
+
+Neutrophils:
+- The most common type of white blood cell, first responders to bacterial
+  infection.
+- Elevated neutrophils alongside elevated WBC often points toward a
+  bacterial infection or acute inflammatory process.
+
+MPV (Mean Platelet Volume):
+- Measures the average size of platelets.
+- Normal range: approximately 7.5-10.3 fL
+- High MPV suggests larger, more reactive/newly-produced platelets - can be
+  associated with increased cardiovascular risk or ongoing inflammation.
+- Low MPV can be seen in certain bone marrow conditions.
+
+Homocysteine:
+- An amino acid in the blood; elevated levels are linked to increased
+  cardiovascular and clotting risk.
+- Normal range: approximately 5-15 micromol/L (varies by lab)
+- Elevated homocysteine is commonly caused by low Vitamin B12, B6, or
+  folate levels - correcting these deficiencies often normalizes it.
+- Other causes: kidney disease, hypothyroidism, certain genetic factors.
+
+Management for elevated inflammatory/platelet markers:
+- Identify and treat any underlying infection.
+- Anti-inflammatory lifestyle: regular exercise, adequate sleep, diet rich
+  in omega-3s and antioxidants (berries, leafy greens, fatty fish).
+- Repeat testing in 4-6 weeks is often recommended for mildly elevated WBC
+  or MPV without clear symptoms, to see if it resolves on its own.
+
+Severity Note: Very high WBC (above 20,000) with fever, or symptoms like
+severe fatigue and easy bruising, warrants prompt medical evaluation.
