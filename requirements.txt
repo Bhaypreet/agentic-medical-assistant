@@ -1,21 +1,35 @@
-langchain
-langchain-community
-langchain-text-splitters
-langgraph
-langchain-groq
-groq
-faiss-cpu
-fastembed
-pdfplumber
-pytesseract
-Pillow
-streamlit
-fastapi
-uvicorn
-python-dotenv
-pydantic
-requests
-reportlab
-plotly
-pandas
-pytest
+# Runtime dependencies for the API service.
+# Bounded to a major/minor range so a rebuild cannot silently pull a
+# breaking release - the langchain family in particular ships breaking
+# changes on minor versions.
+#
+# For a fully reproducible deploy, generate a resolved lockfile from
+# pyproject.toml and install from that instead:
+#   uv pip compile pyproject.toml -o requirements.lock
+#   pip install --require-hashes -r requirements.lock
+
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+gunicorn>=22.0,<24.0
+python-multipart>=0.0.9,<0.1
+pydantic>=2.7,<3.0
+pydantic-settings>=2.3,<3.0
+sqlalchemy>=2.0,<3.0
+slowapi>=0.1.9,<0.2
+python-dotenv>=1.0,<2.0
+requests>=2.32,<3.0
+
+langchain>=0.3,<0.4
+langchain-community>=0.3,<0.4
+langchain-text-splitters>=0.3,<0.4
+langchain-groq>=0.2,<0.4
+langgraph>=0.2,<1.0
+groq>=0.11,<1.0
+
+faiss-cpu>=1.8,<2.0
+fastembed>=0.3,<1.0
+
+pdfplumber>=0.11,<1.0
+pytesseract>=0.3.10,<0.4
+Pillow>=10.3,<12.0
+reportlab>=4.2,<5.0
