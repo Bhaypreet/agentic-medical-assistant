@@ -6,7 +6,6 @@ from utils.storage import create_chat, delete_chat, load_all_chats
 def render_sidebar() -> None:
 
     with st.sidebar:
-
         st.title("🩺 Medical Assistant")
         st.markdown("---")
 
@@ -23,7 +22,6 @@ def render_sidebar() -> None:
             st.caption("No chats yet.")
 
         for chat in chats:
-
             label_column, delete_column = st.columns([5, 1])
 
             label = chat["chat_name"]

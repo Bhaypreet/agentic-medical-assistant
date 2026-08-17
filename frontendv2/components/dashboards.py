@@ -1,6 +1,6 @@
-import streamlit as st
 import pandas as pd
 import plotly.express as px
+import streamlit as st
 
 
 def _bmi_category(bmi):
@@ -22,10 +22,14 @@ def render_dashboard(chat):
     col1, col2 = st.columns(2)
 
     with col1:
-        weight = st.number_input("Weight (kg)", min_value=1.0, max_value=300.0, value=70.0, step=0.5)
+        weight = st.number_input(
+            "Weight (kg)", min_value=1.0, max_value=300.0, value=70.0, step=0.5
+        )
 
     with col2:
-        height = st.number_input("Height (cm)", min_value=50.0, max_value=250.0, value=170.0, step=0.5)
+        height = st.number_input(
+            "Height (cm)", min_value=50.0, max_value=250.0, value=170.0, step=0.5
+        )
 
     if height > 0:
         bmi = weight / ((height / 100) ** 2)
@@ -45,23 +49,23 @@ def render_dashboard(chat):
     rows = []
 
     for section in report["analysis"]:
-
         report_type = section.get("report_type", "Report")
 
         for name, info in section.get("parameters", {}).items():
-
             if not isinstance(info, dict):
                 continue
 
             # An absent status means "not interpreted", not "healthy" -
             # defaulting it to Normal is how an unreadable value used to
             # end up inside the all-clear banner below.
-            rows.append({
-                "Test": name,
-                "Category": report_type,
-                "Status": info.get("status") or "Unknown",
-                "Value": info.get("value", "")
-            })
+            rows.append(
+                {
+                    "Test": name,
+                    "Category": report_type,
+                    "Status": info.get("status") or "Unknown",
+                    "Value": info.get("value", ""),
+                }
+            )
 
     if not rows:
         st.info("No structured lab values were found in this report.")
@@ -89,7 +93,7 @@ def render_dashboard(chat):
             values="Count",
             color="Status",
             color_discrete_map=color_map,
-            title="Overall Test Status"
+            title="Overall Test Status",
         )
         st.plotly_chart(fig_pie, use_container_width=True)
 
@@ -102,7 +106,7 @@ def render_dashboard(chat):
             y="Count",
             color="Status",
             color_discrete_map=color_map,
-            title="Breakdown by Test Category"
+            title="Breakdown by Test Category",
         )
         st.plotly_chart(fig_bar, use_container_width=True)
 

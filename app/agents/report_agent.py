@@ -93,7 +93,6 @@ def report_agent(file_path: str, session_id: str, owner: str = ANONYMOUS) -> dic
     analyses: list[dict] = []
 
     for page in pages:
-
         page_text = page.get("text") or ""
         page_number = page.get("page")
 

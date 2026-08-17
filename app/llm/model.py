@@ -75,7 +75,6 @@ def safe_invoke(prompt, max_retries: int | None = None):
     last_error: Exception | None = None
 
     for attempt in range(attempts):
-
         try:
             return get_model().invoke(prompt)
 

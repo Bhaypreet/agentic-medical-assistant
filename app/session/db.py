@@ -5,7 +5,7 @@ than raw sqlite3 so the same code runs against Postgres in production by
 changing DATABASE_URL alone.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,
@@ -24,7 +24,7 @@ from app.config import settings
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Base(DeclarativeBase):

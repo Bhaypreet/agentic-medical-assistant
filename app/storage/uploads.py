@@ -93,7 +93,6 @@ def store_upload(file: UploadFile) -> Path:
     try:
         with destination.open("wb") as buffer:
             while chunk := file.file.read(_CHUNK):
-
                 if first_chunk:
                     _reject_if_magic_mismatch(chunk, suffix)
                     first_chunk = False

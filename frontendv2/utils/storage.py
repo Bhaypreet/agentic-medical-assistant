@@ -9,6 +9,7 @@ live in st.session_state, which is per browser session, and the messages
 themselves come from the backend, which scopes them to the credential.
 """
 
+import contextlib
 import uuid
 
 import streamlit as st
@@ -115,10 +116,8 @@ def refresh_sessions() -> None:
 
 def delete_chat(chat_id: str) -> None:
 
-    try:
+    with contextlib.suppress(api.ApiError):
         api.delete_session(chat_id)
-    except api.ApiError:
-        pass
 
     _local().pop(chat_id, None)
     refresh_sessions()

@@ -1,6 +1,5 @@
 from app.tools.pdf_report_generator import _sanitize, generate_report_pdf
 
-
 ANALYSIS = [
     {
         "report_type": "CBC",

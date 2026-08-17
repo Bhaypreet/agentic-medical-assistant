@@ -158,7 +158,11 @@ def clarify_answer_node(state: MedicalState) -> dict[str, Any]:
     original = session_manager.get_pending_clarification(session_id, owner=owner)
     session_manager.clear_pending_clarification(session_id, owner=owner)
 
-    combined = f"{original}. Additional details: {state.get('query', '')}" if original else state.get("query", "")
+    combined = (
+        f"{original}. Additional details: {state.get('query', '')}"
+        if original
+        else state.get("query", "")
+    )
 
     result = classify_severity(combined)
 
@@ -166,13 +170,13 @@ def clarify_answer_node(state: MedicalState) -> dict[str, Any]:
 
     response = f"""## Assessment
 
-**Risk level:** {result['risk_level']}
+**Risk level:** {result["risk_level"]}
 
-**Suggested specialist:** {result['specialist']}
+**Suggested specialist:** {result["specialist"]}
 
 **Possible causes:** {conditions}
 
-**Why:** {result['reasoning']}"""
+**Why:** {result["reasoning"]}"""
 
     return {
         "query": combined,
@@ -306,6 +310,7 @@ def resume_doctor_node(state: MedicalState) -> dict[str, Any]:
     return {"response": outcome["response"]}
 
 
+# fmt: off
 _GENERIC_TERMS = {
     "hospital", "hospitals", "doctor", "doctors", "clinic", "clinics",
     "specialist", "cardiologist", "dermatologist", "dentist", "neurologist",
@@ -317,6 +322,7 @@ _SPECIALISTS = [
     "cardiologist", "dermatologist", "dentist", "neurologist",
     "orthopedic", "gynecologist", "pediatrician", "ent specialist",
 ]
+# fmt: on
 
 
 def _extract_location_from_query(query: str) -> str:
@@ -375,8 +381,7 @@ def _format_doctor_response(doctors: list[dict], specialist: str, location: str)
         lines.append(f"🗺 https://www.google.com/maps/search/?api=1&query={lat},{lng}\n")
 
     lines.append(
-        "_Listings come from OpenStreetMap and may be out of date. "
-        "Please call ahead to confirm._"
+        "_Listings come from OpenStreetMap and may be out of date. Please call ahead to confirm._"
     )
 
     return "\n".join(lines)

@@ -121,8 +121,14 @@ def test_one_caller_cannot_download_another_callers_report(client, keyed):
         owner=principal_for_key("alice-key"),
     )
 
-    assert client.get(f"/download-report?session_id={session_id}", headers=keyed["alice"]).status_code == 200
-    assert client.get(f"/download-report?session_id={session_id}", headers=keyed["bob"]).status_code == 404
+    assert (
+        client.get(f"/download-report?session_id={session_id}", headers=keyed["alice"]).status_code
+        == 200
+    )
+    assert (
+        client.get(f"/download-report?session_id={session_id}", headers=keyed["bob"]).status_code
+        == 404
+    )
 
 
 def test_sessions_are_listed_per_caller(client, keyed):
@@ -309,9 +315,7 @@ def test_chat_history_is_persisted_server_side(client):
 
 def test_an_unhandled_error_does_not_leak_internals(client):
     with patch("app.api.routes.graph.invoke", side_effect=RuntimeError("secret db password")):
-        response = client.post(
-            "/chat", json={"query": "hello", "session_id": str(uuid.uuid4())}
-        )
+        response = client.post("/chat", json={"query": "hello", "session_id": str(uuid.uuid4())})
 
     assert response.status_code == 500
     assert "secret db password" not in response.text

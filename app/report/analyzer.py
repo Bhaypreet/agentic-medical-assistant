@@ -152,7 +152,6 @@ def analyze_report(report_data: dict) -> dict:
     counts = {HIGH: 0, LOW: 0, NORMAL: 0, BORDERLINE: 0, UNKNOWN: 0}
 
     for test_name, test_info in parameters.items():
-
         if not isinstance(test_info, dict):
             logger.warning("Skipping malformed parameter entry", extra={"parameter": test_name})
             continue

@@ -12,8 +12,8 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.api.rate_limit import limiter
 from app.api.routes import router
 from app.config import settings
-from app.logging_config import configure_logging, get_logger, request_id_var
 from app.jobs import report_jobs
+from app.logging_config import configure_logging, get_logger, request_id_var
 from app.session.db import init_db
 from app.session.session_manager import SessionNotFound
 from app.storage.cleanup import start_retention_worker

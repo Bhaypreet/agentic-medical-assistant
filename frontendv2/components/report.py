@@ -10,7 +10,7 @@ STATUS_ICON = {
 
 STATUS_HELP = {
     "Unknown": "This value could not be interpreted automatically. "
-               "It is not a statement that the value is normal.",
+    "It is not a statement that the value is normal.",
 }
 
 
@@ -25,11 +25,8 @@ def show_report(report) -> None:
     unknown_total = 0
 
     for section in report["analysis"]:
-
         with st.expander(section.get("report_type", "Report"), expanded=False):
-
             for name, info in (section.get("parameters") or {}).items():
-
                 if not isinstance(info, dict):
                     continue
 

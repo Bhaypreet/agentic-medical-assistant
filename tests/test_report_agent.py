@@ -6,7 +6,6 @@ import pytest
 from app.agents import report_agent as module
 from app.report.extractor import ExtractionFailed
 
-
 PAGE_TEXT = """
 Complete Blood Count
 Hemoglobin   9.0 g/dL   13.0 - 16.5
@@ -15,7 +14,12 @@ Hemoglobin   9.0 g/dL   13.0 - 16.5
 EXTRACTED = {
     "report_type": "CBC",
     "parameters": {
-        "Hemoglobin": {"value": "9.0", "unit": "g/dL", "reference_range": "13.0 - 16.5", "status": ""}
+        "Hemoglobin": {
+            "value": "9.0",
+            "unit": "g/dL",
+            "reference_range": "13.0 - 16.5",
+            "status": "",
+        }
     },
 }
 

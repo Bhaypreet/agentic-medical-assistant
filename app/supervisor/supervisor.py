@@ -33,6 +33,7 @@ logger = get_logger(__name__)
 # in any of those fell through to the general chain and was never triaged.
 # --------------------------------------------------------------------
 
+# fmt: off
 SYMPTOM_WORDS = [
     # English
     "pain", "paining", "hurt", "hurts", "hurting", "ache", "aching", "sore",
@@ -96,6 +97,7 @@ REPORT_WORDS = [
     "haemoglobin", "cholesterol", "sugar", "thyroid", "wbc", "rbc",
     "रिपोर्ट", "ਰਿਪੋਰਟ",
 ]
+# fmt: on
 
 
 def _is_latin(text: str) -> bool:
@@ -119,7 +121,6 @@ def _contains(text: str, words: list[str]) -> bool:
     """
 
     for word in words:
-
         if _is_latin(word):
             if re.search(rf"(?<!\w){re.escape(word)}(?!\w)", text):
                 return True
@@ -140,7 +141,7 @@ def _is_only_greeting(text: str) -> bool:
 
     for word in sorted(GREETING_WORDS, key=len, reverse=True):
         if stripped == word or stripped.startswith(f"{word} "):
-            remainder = stripped[len(word):].strip()
+            remainder = stripped[len(word) :].strip()
             if not remainder or remainder in {"there", "doctor", "doc", "assistant"}:
                 return True
 

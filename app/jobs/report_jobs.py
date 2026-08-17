@@ -14,7 +14,7 @@ but off the request path.
 
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import JSON, DateTime, String, Text, delete, select
 from sqlalchemy.orm import Mapped, mapped_column
@@ -155,7 +155,7 @@ def purge_old_jobs(max_age_hours: int | None = None) -> int:
     """Remove finished jobs; their results contain report data."""
 
     hours = max_age_hours if max_age_hours is not None else settings.report_retention_hours
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=hours)
 
     with SessionLocal() as db:
         result = db.execute(delete(ReportJob).where(ReportJob.created_at < cutoff))

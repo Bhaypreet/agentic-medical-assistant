@@ -40,7 +40,9 @@ def _handle(response: requests.Response):
         raise ApiError("The assistant rejected this app's credentials. Check the API key.")
 
     if response.status_code == 429:
-        raise ApiError("You're sending requests faster than the assistant can handle. Wait a moment.")
+        raise ApiError(
+            "You're sending requests faster than the assistant can handle. Wait a moment."
+        )
 
     if response.status_code == 413:
         raise ApiError("That file is too large to upload.")
@@ -56,7 +58,11 @@ def _handle(response: requests.Response):
         except ValueError:
             detail = ""
 
-        raise ApiError(detail if isinstance(detail, str) and detail else "The assistant is unavailable right now.")
+        raise ApiError(
+            detail
+            if isinstance(detail, str) and detail
+            else "The assistant is unavailable right now."
+        )
 
     return response
 
@@ -121,7 +127,6 @@ def chat_stream(query: str, session_id: str, location: str = ""):
     event = None
 
     for raw in response.iter_lines(decode_unicode=True):
-
         if raw is None:
             continue
 
@@ -132,10 +137,10 @@ def chat_stream(query: str, session_id: str, location: str = ""):
             continue
 
         if line.startswith("event:"):
-            event = line[len("event:"):].strip()
+            event = line[len("event:") :].strip()
         elif line.startswith("data:"):
             try:
-                payload = json.loads(line[len("data:"):].strip())
+                payload = json.loads(line[len("data:") :].strip())
             except ValueError:
                 continue
 
@@ -184,7 +189,6 @@ def wait_for_report(job_id: str, on_progress=None) -> dict:
     deadline = time.monotonic() + JOB_POLL_TIMEOUT
 
     while time.monotonic() < deadline:
-
         job = get_report_status(job_id)
 
         if job["status"] == "succeeded":

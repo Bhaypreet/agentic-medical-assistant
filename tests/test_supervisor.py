@@ -1,7 +1,7 @@
 import uuid
 
-from app.supervisor.supervisor import classify_intent
 from app.session.session_manager import session_manager
+from app.supervisor.supervisor import classify_intent
 
 
 def _new_session():
@@ -23,11 +23,17 @@ def test_greeting_substring_is_not_a_greeting():
 def test_greeting_followed_by_a_symptom_is_a_symptom():
     # Greetings used to be checked before symptoms, so this classified as
     # a greeting - and the greeting branch also cleared pending triage.
-    assert classify_intent("hey, I've had crushing chest pain since morning", _new_session()) == "symptom"
+    assert (
+        classify_intent("hey, I've had crushing chest pain since morning", _new_session())
+        == "symptom"
+    )
 
 
 def test_greeting_with_other_content_is_not_a_greeting():
-    assert classify_intent("hello, can you find me a hospital in Delhi", _new_session()) == "hospital_search"
+    assert (
+        classify_intent("hello, can you find me a hospital in Delhi", _new_session())
+        == "hospital_search"
+    )
 
 
 # ----------------------------------------------------------------- symptoms

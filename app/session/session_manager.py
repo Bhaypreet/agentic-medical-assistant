@@ -12,7 +12,7 @@ the same commit, but every read now takes an `owner` so that knowing a
 session id is not sufficient to read someone else's data.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -33,7 +33,7 @@ def _as_utc(value: datetime | None) -> datetime | None:
         return None
 
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
+        return value.replace(tzinfo=UTC)
 
     return value
 
@@ -43,7 +43,6 @@ class SessionNotFound(Exception):
 
 
 class SessionManager:
-
     # ------------------------------------------------------------------
     # internals
     # ------------------------------------------------------------------

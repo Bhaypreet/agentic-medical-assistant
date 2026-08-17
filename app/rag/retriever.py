@@ -49,7 +49,6 @@ def get_medical_retriever():
     if _retriever is None:
         with _lock:
             if _retriever is None:
-
                 path = settings.vectorstore_dir
 
                 # Checked before the import so a missing store fails fast

@@ -146,7 +146,6 @@ def find_doctors(location: str, specialist: str, radius_meters: int = 8000) -> l
     all_mirrors_failed = True
 
     for radius in (radius_meters, radius_meters * 2, radius_meters * 4):
-
         try:
             data = _run_overpass_query(lat, lng, radius)
             all_mirrors_failed = False
@@ -165,7 +164,6 @@ def find_doctors(location: str, specialist: str, radius_meters: int = 8000) -> l
     results = []
 
     for element in elements:
-
         tags = element.get("tags", {})
         name = tags.get("name")
 

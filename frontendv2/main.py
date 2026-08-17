@@ -53,7 +53,6 @@ with dashboard_tab:
     render_dashboard(chat)
 
 with chat_tab:
-
     if chat.get("summary"):
         show_summary(chat)
 
@@ -79,13 +78,14 @@ with chat_tab:
     pending_prompt = st.session_state.pop("pending_prompt", None)
 
     if chat.get("suggestions") and not pending_prompt:
-
         st.caption("💡 You might also ask:")
         columns = st.columns(len(chat["suggestions"]))
 
         for index, suggestion in enumerate(chat["suggestions"]):
             with columns[index]:
-                if st.button(suggestion, key=f"sugg_{chat['id']}_{index}", use_container_width=True):
+                if st.button(
+                    suggestion, key=f"sugg_{chat['id']}_{index}", use_container_width=True
+                ):
                     st.session_state["pending_prompt"] = suggestion
                     st.rerun()
 
@@ -97,29 +97,26 @@ with chat_tab:
 
     attach_column, mic_column, _ = st.columns([1, 1, 10])
 
-    with attach_column:
-        with st.popover("📎"):
-            st.caption("Upload a lab report (PDF or photo, max 15 MB)")
-            uploaded_file = st.file_uploader(
-                "Upload",
-                type=["pdf", "png", "jpg", "jpeg"],
-                key=f"uploader_{chat['id']}_{upload_nonce}",
-                label_visibility="collapsed",
-            )
+    with attach_column, st.popover("📎"):
+        st.caption("Upload a lab report (PDF or photo, max 15 MB)")
+        uploaded_file = st.file_uploader(
+            "Upload",
+            type=["pdf", "png", "jpg", "jpeg"],
+            key=f"uploader_{chat['id']}_{upload_nonce}",
+            label_visibility="collapsed",
+        )
 
-    with mic_column:
-        with st.popover("🎙️"):
-            st.caption("Record your question, then close this popover")
-            audio_value = st.audio_input(
-                "Record",
-                key=f"mic_{chat['id']}_{mic_nonce}",
-                label_visibility="collapsed",
-            )
+    with mic_column, st.popover("🎙️"):
+        st.caption("Record your question, then close this popover")
+        audio_value = st.audio_input(
+            "Record",
+            key=f"mic_{chat['id']}_{mic_nonce}",
+            label_visibility="collapsed",
+        )
 
     # ---------------------------------------------------------- upload
 
     if uploaded_file is not None:
-
         status = st.status(f"Analysing {uploaded_file.name}…", expanded=True)
 
         try:
@@ -164,7 +161,6 @@ with chat_tab:
     voice_prompt = None
 
     if audio_value is not None:
-
         with st.spinner("Transcribing…"):
             try:
                 voice_prompt = api.transcribe_voice(audio_value.read())
@@ -180,12 +176,10 @@ with chat_tab:
     prompt = pending_prompt or voice_prompt or typed_prompt
 
     if prompt:
-
         with st.chat_message("user"):
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-
             placeholder = st.empty()
             placeholder.markdown("_Thinking…_")
 
@@ -194,7 +188,6 @@ with chat_tab:
 
             try:
                 for event, payload in api.chat_stream(prompt, chat["id"]):
-
                     if event == "progress":
                         placeholder.markdown(f"_{payload.get('label', 'Working…')}_")
                     elif event == "message":

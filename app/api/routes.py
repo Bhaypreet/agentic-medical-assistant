@@ -334,7 +334,6 @@ def chat_stream(
         try:
             for update in graph.stream(state, stream_mode="updates"):
                 for node, changes in (update or {}).items():
-
                     label = NODE_LABELS.get(node)
 
                     if label:

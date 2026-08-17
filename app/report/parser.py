@@ -53,7 +53,6 @@ def extract_text_from_pdf(pdf_path, max_pages: int | None = None) -> list[dict]:
     pages: list[dict] = []
 
     with pdfplumber.open(str(pdf_path)) as pdf:
-
         total = len(pdf.pages)
 
         if total > limit:

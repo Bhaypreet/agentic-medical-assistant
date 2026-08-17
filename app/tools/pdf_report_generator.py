@@ -1,31 +1,39 @@
 import re
 from io import BytesIO
 
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
-from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-)
-
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 _CHAR_REPLACEMENTS = {
-    "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-", "\u2014": "-",
-    "\u2212": "-", "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
-    "\u2026": "...", "\u00a0": " ", "\u2192": "->", "\u2190": "<-",
+    "\u2010": "-",
+    "\u2011": "-",
+    "\u2012": "-",
+    "\u2013": "-",
+    "\u2014": "-",
+    "\u2212": "-",
+    "\u2018": "'",
+    "\u2019": "'",
+    "\u201c": '"',
+    "\u201d": '"',
+    "\u2026": "...",
+    "\u00a0": " ",
+    "\u2192": "->",
+    "\u2190": "<-",
 }
 
 _EMOJI_PATTERN = re.compile(
     "["
-    "\U0001F300-\U0001FAFF"
-    "\U00002600-\U000027BF"
-    "\U0001F000-\U0001F0FF"
-    "\U0001F1E6-\U0001F1FF"  # regional indicators (flags)
-    "\U0000FE00-\U0000FE0F"  # variation selectors - left behind by the
-    "\U0000200D"             # ranges above, and ZWJ joins emoji sequences
-    "\U000020E3"             # combining enclosing keycap
+    "\U0001f300-\U0001faff"
+    "\U00002600-\U000027bf"
+    "\U0001f000-\U0001f0ff"
+    "\U0001f1e6-\U0001f1ff"  # regional indicators (flags)
+    "\U0000fe00-\U0000fe0f"  # variation selectors - left behind by the
+    "\U0000200d"  # ranges above, and ZWJ joins emoji sequences
+    "\U000020e3"  # combining enclosing keycap
     "]+",
-    flags=re.UNICODE
+    flags=re.UNICODE,
 )
 
 
@@ -65,10 +73,7 @@ def _is_heading(line: str) -> bool:
     if stripped.startswith("#"):
         return True
 
-    if len(stripped) < 40 and stripped.endswith(":") and not stripped.startswith("-"):
-        return True
-
-    return False
+    return len(stripped) < 40 and stripped.endswith(":") and not stripped.startswith("-")
 
 
 _STATUS_COLOURS = {
@@ -81,12 +86,14 @@ _STATUS_COLOURS = {
 
 def _append_footer(elements, styles) -> None:
     elements.append(Spacer(1, 20))
-    elements.append(Paragraph(
-        "This report is AI-generated and for informational purposes only. "
-        "It does not replace professional medical advice. A value marked "
-        "'Unknown' could not be interpreted and is not a statement that it is normal.",
-        styles["Italic"]
-    ))
+    elements.append(
+        Paragraph(
+            "This report is AI-generated and for informational purposes only. "
+            "It does not replace professional medical advice. A value marked "
+            "'Unknown' could not be interpreted and is not a statement that it is normal.",
+            styles["Italic"],
+        )
+    )
 
 
 def generate_report_pdf(summary_text: str, analysis: list) -> bytes:
@@ -100,9 +107,7 @@ def generate_report_pdf(summary_text: str, analysis: list) -> bytes:
     styles = getSampleStyleSheet()
 
     title_style = ParagraphStyle(
-        "TitleStyle",
-        parent=styles["Title"],
-        textColor=colors.HexColor("#0f766e")
+        "TitleStyle", parent=styles["Title"], textColor=colors.HexColor("#0f766e")
     )
 
     heading_style = ParagraphStyle(
@@ -110,21 +115,12 @@ def generate_report_pdf(summary_text: str, analysis: list) -> bytes:
         parent=styles["Heading2"],
         textColor=colors.HexColor("#0f766e"),
         spaceBefore=10,
-        spaceAfter=6
+        spaceAfter=6,
     )
 
-    body_style = ParagraphStyle(
-        "Body",
-        parent=styles["Normal"],
-        leading=15,
-        spaceAfter=4
-    )
+    body_style = ParagraphStyle("Body", parent=styles["Normal"], leading=15, spaceAfter=4)
 
-    bullet_style = ParagraphStyle(
-        "Bullet",
-        parent=body_style,
-        leftIndent=14
-    )
+    bullet_style = ParagraphStyle("Bullet", parent=body_style, leftIndent=14)
 
     elements = [
         Paragraph("AI Medical Report Summary", title_style),
@@ -132,7 +128,6 @@ def generate_report_pdf(summary_text: str, analysis: list) -> bytes:
     ]
 
     for raw_line in summary_text.split("\n"):
-
         line = raw_line.strip()
 
         if not line:
@@ -166,10 +161,12 @@ def generate_report_pdf(summary_text: str, analysis: list) -> bytes:
 
     if not analysis:
         elements.append(Spacer(1, 20))
-        elements.append(Paragraph(
-            "No structured laboratory values could be extracted from the uploaded file.",
-            body_style
-        ))
+        elements.append(
+            Paragraph(
+                "No structured laboratory values could be extracted from the uploaded file.",
+                body_style,
+            )
+        )
         _append_footer(elements, styles)
         doc.build(elements)
         buffer.seek(0)
@@ -182,28 +179,27 @@ def generate_report_pdf(summary_text: str, analysis: list) -> bytes:
     unknown_total = 0
 
     for section in analysis:
-
-        elements.append(Paragraph(
-            _sanitize(section.get("report_type", "Report")),
-            styles["Heading3"]
-        ))
+        elements.append(
+            Paragraph(_sanitize(section.get("report_type", "Report")), styles["Heading3"])
+        )
 
         table_data = [["Parameter", "Value", "Unit", "Status"]]
         status_styles = []
 
         for row_index, (name, info) in enumerate(section.get("parameters", {}).items(), start=1):
-
             if not isinstance(info, dict):
                 continue
 
             status = str(info.get("status", ""))
 
-            table_data.append([
-                _sanitize(str(name)),
-                _sanitize(str(info.get("value", "-"))),
-                _sanitize(str(info.get("unit", ""))),
-                _sanitize(status)
-            ])
+            table_data.append(
+                [
+                    _sanitize(str(name)),
+                    _sanitize(str(info.get("value", "-"))),
+                    _sanitize(str(info.get("unit", ""))),
+                    _sanitize(status),
+                ]
+            )
 
             colour = _STATUS_COLOURS.get(status)
 
@@ -214,25 +210,36 @@ def generate_report_pdf(summary_text: str, analysis: list) -> bytes:
                 unknown_total += 1
 
         table = Table(table_data, hAlign="LEFT")
-        table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0fdfa")]),
-            *status_styles,
-        ]))
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    (
+                        "ROWBACKGROUNDS",
+                        (0, 1),
+                        (-1, -1),
+                        [colors.white, colors.HexColor("#f0fdfa")],
+                    ),
+                    *status_styles,
+                ]
+            )
+        )
 
         elements.append(table)
         elements.append(Spacer(1, 14))
 
     if unknown_total:
-        elements.append(Paragraph(
-            f"<b>{unknown_total} value(s) are marked Unknown.</b> These could not be "
-            "interpreted automatically and must be confirmed with your clinician. "
-            "They are not a statement that the value is normal.",
-            body_style
-        ))
+        elements.append(
+            Paragraph(
+                f"<b>{unknown_total} value(s) are marked Unknown.</b> These could not be "
+                "interpreted automatically and must be confirmed with your clinician. "
+                "They are not a statement that the value is normal.",
+                body_style,
+            )
+        )
         elements.append(Spacer(1, 10))
 
     _append_footer(elements, styles)

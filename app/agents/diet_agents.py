@@ -32,8 +32,7 @@ def diet_agent(session_id: str, query: str, chat_history=None, owner: str = ANON
 
     if analysis:
         report_context = (
-            "Patient's lab report findings (use these to personalise the plan):\n"
-            f"{analysis}"
+            f"Patient's lab report findings (use these to personalise the plan):\n{analysis}"
         )
     else:
         report_context = (
