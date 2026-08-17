@@ -21,3 +21,15 @@ def _create_schema():
     from app.session.db import init_db
 
     init_db()
+
+
+@pytest.fixture(autouse=True)
+def _disable_rate_limits():
+    """Rate limits are verified in one dedicated test; leaving them on
+    would make every other test order-dependent."""
+
+    from app.api.rate_limit import limiter
+
+    limiter.enabled = False
+    yield
+    limiter.enabled = False

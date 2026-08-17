@@ -1,119 +1,274 @@
 import os
-import shutil
 import tempfile
-
-from fastapi import APIRouter, UploadFile, File
-from fastapi.responses import StreamingResponse
 from io import BytesIO
 
-from app.api.schemas import ChatRequest
-from app.agents.graph import graph
-from app.agents.report_agent import report_agent
-from app.agents.report_chat_agent import report_chat_agent
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
+from fastapi.responses import StreamingResponse
+
+from app.agents.graph import build_state, graph
+from app.api.rate_limit import limiter
+from app.api.schemas import (
+    ChatRequest,
+    ChatResponse,
+    HealthResponse,
+    HistoryResponse,
+    JobStatus,
+    ReadinessResponse,
+    SessionSummary,
+    TranscriptionResponse,
+    UploadAccepted,
+)
+from app.api.security import require_owner, validate_session_id
+from app.config import settings
+from app.jobs import report_jobs
+from app.logging_config import get_logger
+from app.rag import retriever as rag_retriever
+from app.safety import apply_safety
 from app.session.session_manager import session_manager
-from app.tools.suggestion_generator import generate_suggestions
-from app.tools.voice import transcribe_audio
+from app.storage.cleanup import delete_report_store
+from app.storage.uploads import safe_display_name, store_upload
 from app.tools.pdf_report_generator import generate_report_pdf
+from app.tools.suggestion_generator import generate_suggestions
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
+MAX_AUDIO_BYTES = 25 * 1024 * 1024
 
-@router.get("/")
+
+@router.get("/", tags=["meta"])
 def home():
-    return {"message": "Agentic Medical Assistant API Running 🚀"}
+    return {"message": "Agentic Medical Assistant API"}
 
 
-@router.get("/health")
+@router.get("/health", response_model=HealthResponse, tags=["meta"])
 def health():
-    return {"status": "healthy"}
+    """Liveness: is this process running at all."""
+    return {"status": "alive"}
 
 
-@router.post("/chat")
-def chat(request: ChatRequest):
+@router.get("/ready", response_model=ReadinessResponse, tags=["meta"])
+def ready(request: Request):
+    """Readiness: can this process actually serve traffic.
 
-    history = session_manager.get_messages(request.session_id)
+    /health used to return a hardcoded "healthy" and stayed green while
+    the vector store was missing and the credential was invalid, so an
+    orchestrator kept routing traffic to a broken instance.
+    """
+
+    checks: dict[str, str] = {}
+
+    try:
+        session_manager.list_sessions(owner="__readiness__", limit=1)
+        checks["database"] = "ok"
+    except Exception:
+        logger.exception("Readiness: database check failed")
+        checks["database"] = "failed"
+
+    checks["credentials"] = "ok" if settings.groq_api_key else "missing"
+    checks["knowledge_base"] = "ok" if rag_retriever.is_ready() else "degraded"
+
+    if checks["database"] != "ok" or checks["credentials"] != "ok":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"status": "not ready", "checks": checks},
+        )
+
+    return {"status": "ready", "checks": checks}
+
+
+# ---------------------------------------------------------------- chat
+
+
+@router.post("/chat", response_model=ChatResponse, tags=["chat"])
+@limiter.limit(settings.chat_rate_limit)
+def chat(
+    request: Request,
+    response: Response,
+    payload: ChatRequest,
+    owner: str = Depends(require_owner),
+):
+
+    session_id = validate_session_id(payload.session_id)
+
+    history = session_manager.get_messages(session_id, owner=owner)
 
     result = graph.invoke(
-        {
-            "query": request.query,
-            "pdf_path": "",
-            "session_id": request.session_id,
-            "report_id": "",
-            "location": request.location,
-            "severity": 0,
-            "report_analysis": [],
-            "response": "",
-            "chat_history": history
-        }
+        build_state(
+            query=payload.query,
+            session_id=session_id,
+            owner=owner,
+            location=payload.location,
+            chat_history=history,
+        )
     )
 
-    response_text = result.get("response", "No response generated.")
+    answer = apply_safety(
+        result.get("response") or "I wasn't able to produce an answer to that.",
+        severity=result.get("severity"),
+        emergency=result.get("emergency"),
+    )
 
-    session_manager.add_message(request.session_id, "user", request.query)
-    session_manager.add_message(request.session_id, "assistant", response_text)
-
-    suggestions = generate_suggestions(request.query, response_text)
+    session_manager.add_message(session_id, "user", payload.query, owner=owner)
+    session_manager.add_message(session_id, "assistant", answer, owner=owner)
 
     return {
-        "response": response_text,
-        "suggestions": suggestions
+        "response": answer,
+        "suggestions": generate_suggestions(payload.query, answer),
+        "session_id": session_id,
     }
 
 
-@router.post("/upload-report")
-async def upload_report(
+@router.get("/history", response_model=HistoryResponse, tags=["chat"])
+def history(session_id: str, owner: str = Depends(require_owner), limit: int = 200):
+    """The conversation, from the server.
+
+    The frontend used to keep its own parallel copy, which drifted from
+    the backend's immediately - the report summary was added to one and
+    not the other, so the model never knew a report had been discussed.
+    """
+
+    session_id = validate_session_id(session_id)
+
+    return {
+        "session_id": session_id,
+        "messages": session_manager.get_messages(session_id, owner=owner, limit=min(limit, 500)),
+    }
+
+
+@router.get("/sessions", response_model=list[SessionSummary], tags=["chat"])
+def list_sessions(owner: str = Depends(require_owner), limit: int = 100):
+    return session_manager.list_sessions(owner=owner, limit=min(limit, 200))
+
+
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["chat"])
+def delete_session(session_id: str, owner: str = Depends(require_owner)):
+    """Delete a chat and everything derived from it."""
+
+    session_id = validate_session_id(session_id)
+
+    report_id = session_manager.clear_chat(session_id, owner=owner)
+
+    # Deleting a chat used to orphan its vector store on disk forever.
+    delete_report_store(report_id)
+
+    return None
+
+
+# -------------------------------------------------------------- reports
+
+
+@router.post(
+    "/upload-report",
+    response_model=UploadAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["reports"],
+)
+@limiter.limit(settings.upload_rate_limit)
+def upload_report(
+    request: Request,
+    response: Response,
     session_id: str,
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    owner: str = Depends(require_owner),
 ):
+    """Accept a report and process it off the request path.
 
-    os.makedirs("uploads", exist_ok=True)
+    Returns a job id immediately; poll /report-status/{job_id}.
+    """
 
-    file_path = os.path.join("uploads", file.filename)
+    session_id = validate_session_id(session_id)
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    stored_path = store_upload(file)
+    display_name = safe_display_name(file.filename)
 
-    result = report_agent(file_path=file_path, session_id=session_id)
+    session_manager.set_chat_name(session_id, display_name, owner=owner)
 
-    return result
+    job_id = report_jobs.submit(
+        file_path=stored_path,
+        session_id=session_id,
+        owner=owner,
+        filename=display_name,
+    )
+
+    return {"job_id": job_id, "session_id": session_id, "status": "pending"}
 
 
-@router.post("/report-chat")
-def report_chat(session_id: str, question: str):
+@router.get("/report-status/{job_id}", response_model=JobStatus, tags=["reports"])
+def report_status(job_id: str, owner: str = Depends(require_owner)):
 
-    answer = report_chat_agent(session_id=session_id, question=question)
+    job = report_jobs.get_job(job_id, owner=owner)
 
-    return {"response": answer}
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found.")
+
+    return job
 
 
-@router.post("/transcribe")
-async def transcribe(file: UploadFile = File(...)):
-    """Voice input - converts recorded speech to text."""
+@router.get("/download-report", tags=["reports"])
+def download_report(session_id: str, owner: str = Depends(require_owner)):
+    """A PDF of the patient's analysed report."""
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        shutil.copyfileobj(file.file, tmp)
-        tmp_path = tmp.name
+    session_id = validate_session_id(session_id)
 
-    try:
-        text = transcribe_audio(tmp_path)
-    finally:
-        os.remove(tmp_path)
+    report_data = session_manager.get_report_data(session_id, owner=owner)
 
-    return {"text": text}
-
-@router.get("/download-report")
-def download_report(session_id: str):
-    """Generates a downloadable PDF of the patient's analyzed report."""
-
-    report_data = session_manager.get_report_data(session_id)
+    if not report_data.get("analysis") and not report_data.get("summary"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No analysed report is available for this chat.",
+        )
 
     pdf_bytes = generate_report_pdf(
-        summary_text=report_data.get("summary", "No summary available."),
-        analysis=report_data.get("analysis", [])
+        summary_text=report_data.get("summary", ""),
+        analysis=report_data.get("analysis", []),
     )
 
     return StreamingResponse(
         BytesIO(pdf_bytes),
         media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=health_report.pdf"}
+        headers={
+            "Content-Disposition": 'attachment; filename="health_report.pdf"',
+            "Cache-Control": "no-store",
+        },
     )
+
+
+# ---------------------------------------------------------------- voice
+
+
+@router.post("/transcribe", response_model=TranscriptionResponse, tags=["voice"])
+@limiter.limit(settings.transcribe_rate_limit)
+async def transcribe(
+    request: Request,
+    response: Response,
+    file: UploadFile = File(...),
+    owner: str = Depends(require_owner),
+):
+    from app.tools.voice import transcribe_audio
+
+    payload = await file.read(MAX_AUDIO_BYTES + 1)
+
+    if len(payload) > MAX_AUDIO_BYTES:
+        raise HTTPException(
+            status_code=413,  # Content Too Large
+            detail="Recording is too long.",
+        )
+
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Recording is empty.",
+        )
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        tmp.write(payload)
+        tmp_path = tmp.name
+
+    try:
+        text = transcribe_audio(tmp_path)
+    finally:
+        os.unlink(tmp_path)
+
+    return {"text": text}

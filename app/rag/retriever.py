@@ -49,14 +49,17 @@ def get_medical_retriever():
     if _retriever is None:
         with _lock:
             if _retriever is None:
-                from langchain_community.vectorstores import FAISS
 
                 path = settings.vectorstore_dir
 
+                # Checked before the import so a missing store fails fast
+                # instead of paying to load the vector libraries first.
                 if not path.exists():
                     raise KnowledgeBaseUnavailable(
                         f"No vector store at {path}. Run 'python -m app.rag.ingest' first."
                     )
+
+                from langchain_community.vectorstores import FAISS
 
                 # The index is built by our own ingest step and never
                 # accepted from a user, so unpickling it is safe here.

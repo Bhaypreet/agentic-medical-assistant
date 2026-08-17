@@ -102,7 +102,7 @@ def store_upload(file: UploadFile) -> Path:
 
                 if written > settings.max_upload_bytes:
                     raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        status_code=413,  # Content Too Large
                         detail=(
                             "File is too large. Maximum size is "
                             f"{settings.max_upload_bytes // (1024 * 1024)} MB."

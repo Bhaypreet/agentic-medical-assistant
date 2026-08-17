@@ -74,13 +74,22 @@ def purge_expired(retention_hours: int | None = None) -> dict[str, int]:
                 shutil.rmtree(item, ignore_errors=True)
                 removed_stores += 1
 
-    if removed_uploads or removed_stores:
+    # Finished job rows hold the report result, which is patient data.
+    from app.jobs.report_jobs import purge_old_jobs
+
+    removed_jobs = purge_old_jobs(hours)
+
+    if removed_uploads or removed_stores or removed_jobs:
         logger.info(
             "Retention sweep complete",
-            extra={"uploads_removed": removed_uploads, "stores_removed": removed_stores},
+            extra={
+                "uploads_removed": removed_uploads,
+                "stores_removed": removed_stores,
+                "jobs_removed": removed_jobs,
+            },
         )
 
-    return {"uploads": removed_uploads, "stores": removed_stores}
+    return {"uploads": removed_uploads, "stores": removed_stores, "jobs": removed_jobs}
 
 
 def start_retention_worker(interval_seconds: int = 3600):
