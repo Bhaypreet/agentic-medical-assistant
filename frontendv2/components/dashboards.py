@@ -50,10 +50,16 @@ def render_dashboard(chat):
 
         for name, info in section.get("parameters", {}).items():
 
+            if not isinstance(info, dict):
+                continue
+
+            # An absent status means "not interpreted", not "healthy" -
+            # defaulting it to Normal is how an unreadable value used to
+            # end up inside the all-clear banner below.
             rows.append({
                 "Test": name,
                 "Category": report_type,
-                "Status": info.get("status", "Normal") or "Normal",
+                "Status": info.get("status") or "Unknown",
                 "Value": info.get("value", "")
             })
 
@@ -63,7 +69,13 @@ def render_dashboard(chat):
 
     df = pd.DataFrame(rows)
 
-    color_map = {"High": "#ef4444", "Low": "#f59e0b", "Borderline": "#f97316", "Normal": "#10b981"}
+    color_map = {
+        "High": "#ef4444",
+        "Low": "#f59e0b",
+        "Borderline": "#f97316",
+        "Normal": "#10b981",
+        "Unknown": "#9ca3af",
+    }
 
     status_counts = df["Status"].value_counts().reset_index()
     status_counts.columns = ["Status", "Count"]
@@ -94,11 +106,26 @@ def render_dashboard(chat):
         )
         st.plotly_chart(fig_bar, use_container_width=True)
 
-    st.markdown("### 🔎 Abnormal Values")
+    st.markdown("### 🔎 Values needing attention")
 
-    abnormal_df = df[df["Status"] != "Normal"][["Test", "Category", "Value", "Status"]]
+    flagged = df[~df["Status"].isin(["Normal"])][["Test", "Category", "Value", "Status"]]
 
-    if abnormal_df.empty:
-        st.success("All values are within normal range! 🎉")
+    unknown_count = int((df["Status"] == "Unknown").sum())
+    abnormal_count = int(len(flagged) - unknown_count)
+
+    if flagged.empty:
+        st.success("Every value in this report was read and is within its normal range.")
     else:
-        st.dataframe(abnormal_df, use_container_width=True, hide_index=True)
+        st.dataframe(flagged, use_container_width=True, hide_index=True)
+
+    if unknown_count:
+        # The old banner claimed "All values are within normal range" while
+        # unreadable values were silently counted as Normal.
+        st.warning(
+            f"{unknown_count} value(s) could not be interpreted and are marked "
+            "**Unknown**. They are not confirmed as normal - please check them "
+            "with your clinician."
+        )
+
+    if abnormal_count == 0 and unknown_count:
+        st.caption("No abnormal values were found among the values that could be read.")

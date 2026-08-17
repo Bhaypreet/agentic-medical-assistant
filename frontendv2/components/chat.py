@@ -1,25 +1,9 @@
 import streamlit as st
 
 
-def render_messages(chat):
+def render_messages(messages) -> None:
+    """Render the conversation as returned by the backend."""
 
-    messages = chat.get("messages", [])
-
-    for message in messages:
-
+    for message in messages or []:
         with st.chat_message(message["role"]):
-
             st.markdown(message["content"])
-
-
-def add_message(chat, role, content):
-
-    if "messages" not in chat:
-        chat["messages"] = []
-
-    chat["messages"].append(
-        {
-            "role": role,
-            "content": content
-        }
-    )

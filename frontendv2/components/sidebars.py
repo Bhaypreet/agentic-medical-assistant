@@ -1,47 +1,52 @@
 import streamlit as st
 
-from utils.storage import (
-    load_all_chats,
-    delete_chat,
-    create_chat
-)
+from utils.storage import create_chat, delete_chat, load_all_chats
 
 
-def render_sidebar():
+def render_sidebar() -> None:
 
     with st.sidebar:
 
         st.title("🩺 Medical Assistant")
         st.markdown("---")
 
-        if st.button("➕ New Chat", use_container_width=True):
-            session = create_chat()
-            st.session_state.current_chat = session
+        if st.button("➕ New chat", use_container_width=True):
+            st.session_state.current_chat = create_chat()
             st.rerun()
 
         st.markdown("---")
         st.subheader("💬 Chats")
 
         chats = load_all_chats()
-        chats.sort(key=lambda x: x["chat_name"])
+
+        if not chats:
+            st.caption("No chats yet.")
 
         for chat in chats:
-            col1, col2 = st.columns([5, 1])
 
-            with col1:
-                if st.button(chat["chat_name"], key=chat["id"], use_container_width=True):
+            label_column, delete_column = st.columns([5, 1])
+
+            label = chat["chat_name"]
+
+            if chat.get("has_report"):
+                label = f"📄 {label}"
+
+            with label_column:
+                if st.button(label, key=chat["id"], use_container_width=True):
                     st.session_state.current_chat = chat
                     st.rerun()
 
-            with col2:
-                if st.button("🗑", key="delete_" + chat["id"]):
+            with delete_column:
+                if st.button("🗑", key=f"delete_{chat['id']}", help="Delete this chat"):
                     delete_chat(chat["id"])
-                    if (
-                        "current_chat" in st.session_state
-                        and st.session_state.current_chat["id"] == chat["id"]
-                    ):
+
+                    current = st.session_state.get("current_chat")
+
+                    if current and current["id"] == chat["id"]:
                         del st.session_state.current_chat
+
                     st.rerun()
 
         st.markdown("---")
-        st.caption("🌐 Automatically replies in Hindi or English based on your question")
+        st.caption("🌐 Replies in the language you write in.")
+        st.caption("⚠️ Informational only — not a medical diagnosis.")

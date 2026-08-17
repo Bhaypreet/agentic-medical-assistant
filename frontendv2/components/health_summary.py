@@ -1,12 +1,13 @@
 import streamlit as st
 
 
-def show_summary(chat):
+def show_summary(chat) -> None:
 
-    if "summary" not in chat:
+    summary = chat.get("summary")
 
+    if not summary:
         return
 
-    st.subheader("🩺 AI Health Summary")
-
-    st.info(chat["summary"])
+    st.subheader("🩺 AI health summary")
+    st.markdown(summary)
+    st.caption("AI-generated and informational only — it does not replace a clinician.")

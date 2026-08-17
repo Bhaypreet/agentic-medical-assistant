@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 from io import BytesIO
@@ -272,3 +273,100 @@ async def transcribe(
         os.unlink(tmp_path)
 
     return {"text": text}
+
+
+# ------------------------------------------------------------ streaming
+
+# Human-readable progress for each node, so the client can show what the
+# assistant is actually doing instead of a static spinner.
+NODE_LABELS = {
+    "ask_clarification_node": "Thinking about what to ask you…",
+    "clarify_answer_node": "Assessing what you've described…",
+    "rag_node": "Looking this up…",
+    "diet_node": "Building a nutrition plan…",
+    "doctor_node": "Finding nearby clinics…",
+    "resume_doctor_node": "Finding nearby clinics…",
+    "hospital_search_node": "Searching the facility directory…",
+    "ask_location_node": "Preparing a recommendation…",
+    "report_chat_node": "Reading your report…",
+    "report_node": "Analysing your report…",
+    "greeting_node": "Saying hello…",
+}
+
+
+def _sse(event: str, data) -> str:
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+@router.post("/chat/stream", tags=["chat"])
+@limiter.limit(settings.chat_rate_limit)
+def chat_stream(
+    request: Request,
+    response: Response,
+    payload: ChatRequest,
+    owner: str = Depends(require_owner),
+):
+    """Server-sent events for a chat turn.
+
+    The frontend previously faked a typewriter effect by sleeping 20ms per
+    token over an answer that had already arrived in full, which added
+    roughly ten seconds of latency to a long reply rather than hiding any.
+    Progress is now reported as the graph actually runs.
+    """
+
+    session_id = validate_session_id(payload.session_id)
+    history = session_manager.get_messages(session_id, owner=owner)
+
+    state = build_state(
+        query=payload.query,
+        session_id=session_id,
+        owner=owner,
+        location=payload.location,
+        chat_history=history,
+    )
+
+    def events():
+
+        answer = ""
+        severity = None
+        emergency = None
+
+        try:
+            for update in graph.stream(state, stream_mode="updates"):
+                for node, changes in (update or {}).items():
+
+                    label = NODE_LABELS.get(node)
+
+                    if label:
+                        yield _sse("progress", {"step": node, "label": label})
+
+                    if not isinstance(changes, dict):
+                        continue
+
+                    answer = changes.get("response") or answer
+                    severity = changes.get("severity", severity)
+                    emergency = changes.get("emergency", emergency)
+
+        except Exception:
+            logger.exception("Streaming chat turn failed")
+            yield _sse("error", {"detail": "Something went wrong. Please try again."})
+            return
+
+        final = apply_safety(
+            answer or "I wasn't able to produce an answer to that.",
+            severity=severity,
+            emergency=emergency,
+        )
+
+        session_manager.add_message(session_id, "user", payload.query, owner=owner)
+        session_manager.add_message(session_id, "assistant", final, owner=owner)
+
+        yield _sse("message", {"response": final})
+        yield _sse("suggestions", {"suggestions": generate_suggestions(payload.query, final)})
+        yield _sse("done", {"session_id": session_id})
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
