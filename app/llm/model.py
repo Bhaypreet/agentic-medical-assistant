@@ -59,6 +59,36 @@ def _retry_after_seconds(error: Exception, attempt: int) -> float:
     return min(2**attempt, 30) + random.uniform(0, 1)
 
 
+def _log_usage(response, elapsed_seconds: float) -> None:
+    """Record tokens and latency for every model call.
+
+    Nothing tracked spend before, which for an LLM product is the number
+    that decides whether it can stay switched on. The request id already
+    on every log line ties these back to one user's turn.
+    """
+
+    usage = {}
+
+    try:
+        metadata = getattr(response, "usage_metadata", None) or {}
+        usage = {
+            "input_tokens": metadata.get("input_tokens"),
+            "output_tokens": metadata.get("output_tokens"),
+            "total_tokens": metadata.get("total_tokens"),
+        }
+    except Exception:  # pragma: no cover - provider metadata is best-effort
+        usage = {}
+
+    logger.info(
+        "Model call complete",
+        extra={
+            "model": settings.groq_model,
+            "duration_ms": round(elapsed_seconds * 1000, 1),
+            **{key: value for key, value in usage.items() if value is not None},
+        },
+    )
+
+
 def safe_invoke(prompt, max_retries: int | None = None):
     """Invoke the model, retrying transient failures.
 
@@ -76,7 +106,12 @@ def safe_invoke(prompt, max_retries: int | None = None):
 
     for attempt in range(attempts):
         try:
-            return get_model().invoke(prompt)
+            started = time.perf_counter()
+            response = get_model().invoke(prompt)
+
+            _log_usage(response, time.perf_counter() - started)
+
+            return response
 
         except retryable as error:
             last_error = error
