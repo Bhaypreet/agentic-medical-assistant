@@ -14,3 +14,4 @@ uploads/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+testpdf*.pdf
