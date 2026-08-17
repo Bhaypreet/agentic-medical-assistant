@@ -11,3 +11,13 @@ os.environ.setdefault("ENVIRONMENT", "development")
 os.environ.setdefault("GROQ_API_KEY", "test-dummy-key-for-ci")
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("API_KEYS", "")
+
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _create_schema():
+    from app.session.db import init_db
+
+    init_db()
