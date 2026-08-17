@@ -10,7 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -124,8 +124,25 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """Cached accessor so the environment is parsed exactly once."""
-    return Settings()
+    """Cached accessor so the environment is parsed exactly once.
+
+    A misconfiguration aborts startup with the offending variables named,
+    rather than a pydantic traceback the operator has to decode.
+    """
+
+    try:
+        return Settings()
+    except ValidationError as error:
+        problems = "\n".join(
+            f"  - {'.'.join(str(part) for part in item['loc']).upper()}: {item['msg']}"
+            for item in error.errors()
+        )
+
+        raise SystemExit(
+            "Cannot start: the environment is not configured correctly.\n\n"
+            f"{problems}\n\n"
+            "See .env.example for the full list of variables."
+        ) from error
 
 
 settings = get_settings()
