@@ -18,15 +18,15 @@ from utils.storage import (
     create_chat
 )
 
-from conponents.sidebars import render_sidebar
-from conponents.chat import (
+from components.sidebars import render_sidebar
+from components.chat import (
     render_messages,
     add_message
 )
-from conponents.report import show_report
-from conponents.health_summary import show_summary
-from conponents.streaming import stream_text
-from conponents.dashboards import render_dashboard
+from components.report import show_report
+from components.health_summary import show_summary
+from components.streaming import stream_text
+from components.dashboards import render_dashboard
 
 
 st.set_page_config(
