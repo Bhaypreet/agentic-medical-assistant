@@ -14,7 +14,14 @@ from app.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-_lock = threading.Lock()
+# One lock per singleton, and they are never held at the same time.
+# A single shared lock deadlocked: get_medical_retriever() held it and
+# then called get_embedding_model(), which waited on the same
+# non-reentrant lock forever - silently, because it blocks before it
+# logs anything.
+_model_lock = threading.Lock()
+_retriever_lock = threading.Lock()
+
 _embedding_model = None
 _retriever = None
 
@@ -29,7 +36,7 @@ def get_embedding_model():
     global _embedding_model
 
     if _embedding_model is None:
-        with _lock:
+        with _model_lock:
             if _embedding_model is None:
                 from langchain_community.embeddings import FastEmbedEmbeddings
 
@@ -46,30 +53,36 @@ def get_medical_retriever():
 
     global _retriever
 
-    if _retriever is None:
-        with _lock:
-            if _retriever is None:
-                path = settings.vectorstore_dir
+    if _retriever is not None:
+        return _retriever
 
-                # Checked before the import so a missing store fails fast
-                # instead of paying to load the vector libraries first.
-                if not path.exists():
-                    raise KnowledgeBaseUnavailable(
-                        f"No vector store at {path}. Run 'python -m app.rag.ingest' first."
-                    )
+    path = settings.vectorstore_dir
 
-                from langchain_community.vectorstores import FAISS
+    # Checked before the import so a missing store fails fast instead of
+    # paying to load the vector libraries first.
+    if not path.exists():
+        raise KnowledgeBaseUnavailable(
+            f"No vector store at {path}. Run 'python -m app.rag.ingest' first."
+        )
 
-                # The index is built by our own ingest step and never
-                # accepted from a user, so unpickling it is safe here.
-                store = FAISS.load_local(
-                    str(path),
-                    get_embedding_model(),
-                    allow_dangerous_deserialization=True,
-                )
+    # Resolved before the lock below is taken, so the two locks are never
+    # held at once.
+    embeddings = get_embedding_model()
 
-                _retriever = store.as_retriever(search_kwargs={"k": settings.retriever_k})
-                logger.info("Knowledge base loaded", extra={"path": str(path)})
+    with _retriever_lock:
+        if _retriever is None:
+            from langchain_community.vectorstores import FAISS
+
+            # The index is built by our own ingest step and never
+            # accepted from a user, so unpickling it is safe here.
+            store = FAISS.load_local(
+                str(path),
+                embeddings,
+                allow_dangerous_deserialization=True,
+            )
+
+            _retriever = store.as_retriever(search_kwargs={"k": settings.retriever_k})
+            logger.info("Knowledge base loaded", extra={"path": str(path)})
 
     return _retriever
 

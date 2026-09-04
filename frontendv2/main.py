@@ -6,7 +6,6 @@ from components.dashboards import render_dashboard
 from components.health_summary import show_summary
 from components.report import show_report
 from components.sidebars import render_sidebar
-from config import API_KEY, FASTAPI_URL
 from styles import CSS
 from utils.storage import create_chat, load_all_chats, load_messages, refresh_sessions, save_chat
 
@@ -36,14 +35,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-if not API_KEY:
-    st.info(
-        f"No API key is configured, so this app is talking to `{FASTAPI_URL}` "
-        "unauthenticated. Set `MEDICAL_ASSISTANT_API_KEY` before deploying — "
-        "without it, anyone reaching the backend can read the chats it stores.",
-        icon="🔑",
-    )
 
 st.subheader(chat.get("chat_name", "New Chat"))
 
