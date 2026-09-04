@@ -21,6 +21,13 @@ WORKDIR /app
 
 # Dependencies are copied and installed before the source, so a code
 # change does not invalidate the (slow) dependency layer.
+# The embedding model is downloaded during the build below. Cache it in a
+# known directory that the runtime user can read - otherwise the download
+# lands in root's home, is unreadable after USER appuser, and every cold
+# start pays for it again.
+ENV FASTEMBED_CACHE_PATH=/app/model_cache \
+    HF_HOME=/app/model_cache/hf
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -40,8 +47,8 @@ RUN GROQ_API_KEY=unused-at-build-time python -m app.rag.ingest
 # The service ran as root. Give it an unprivileged user that owns only
 # the directories it must write to.
 RUN useradd --create-home --shell /usr/sbin/nologin appuser \
-    && mkdir -p /app/uploads /app/report_vectorstore /app/data_store \
-    && chown -R appuser:appuser /app/uploads /app/report_vectorstore /app/data_store
+    && mkdir -p /app/uploads /app/report_vectorstore /app/data_store /app/model_cache \
+    && chown -R appuser:appuser /app/uploads /app/report_vectorstore /app/data_store /app/model_cache
 
 # The service runs as appuser, but WORKDIR /app is root-owned, so the
 # default DATABASE_URL of "sqlite:///./sessions.db" could not be created

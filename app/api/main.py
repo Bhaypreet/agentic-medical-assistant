@@ -1,3 +1,4 @@
+import asyncio
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -23,14 +24,46 @@ configure_logging()
 logger = get_logger(__name__)
 
 
+async def _warm_retrieval(app: FastAPI) -> None:
+    """Load the knowledge base without blocking startup.
+
+    Loading the embedding model can take minutes on a small instance -
+    it may have to download the model first. Doing that inline blocked
+    the event loop, so uvicorn never finished startup, never served HTTP,
+    and the platform's port scan failed even though gunicorn was bound.
+
+    Retrieval is lazy anyway: until this finishes, general questions fall
+    back to the model's own knowledge and /ready reports "degraded".
+    """
+
+    from app.rag.retriever import warm_up
+
+    try:
+        app.state.retrieval_ready = await asyncio.to_thread(warm_up)
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        logger.exception("Knowledge base warm-up failed")
+        app.state.retrieval_ready = False
+
+    if app.state.retrieval_ready:
+        logger.info("Knowledge base ready")
+    else:
+        logger.error(
+            "Knowledge base unavailable; general medical questions will "
+            "return a degraded response. Run 'python -m app.rag.ingest'."
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Start-up and shut-down work.
 
     Retrieval used to load at module import, so a missing vectorstore
     directory made the whole application fail to import and the container
-    restart-loop. Warm-up happens here instead, and a failure is recorded
-    and surfaced by the readiness probe rather than killing the process.
+    restart-loop. Warm-up happens here instead, off the startup path, and
+    a failure is recorded and surfaced by the readiness probe rather than
+    killing the process.
     """
 
     logger.info("Starting service", extra={"environment": settings.environment})
@@ -39,15 +72,8 @@ async def lifespan(app: FastAPI):
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     settings.report_vectorstore_dir.mkdir(parents=True, exist_ok=True)
 
-    from app.rag.retriever import warm_up
-
-    app.state.retrieval_ready = warm_up()
-
-    if not app.state.retrieval_ready:
-        logger.error(
-            "Knowledge base unavailable; general medical questions will "
-            "return a degraded response. Run 'python -m app.rag.ingest'."
-        )
+    app.state.retrieval_ready = False
+    warm_task = asyncio.create_task(_warm_retrieval(app))
 
     stop_cleanup = start_retention_worker()
 
@@ -62,6 +88,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    warm_task.cancel()
     stop_cleanup()
     report_jobs.shutdown()
     logger.info("Shutting down")
