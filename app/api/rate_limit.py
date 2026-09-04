@@ -7,27 +7,36 @@ exhaust the API quota - and safe_invoke's retry-with-sleep behaviour then
 converted the resulting rate limits into held server threads.
 """
 
+import hashlib
+
 from fastapi import Request
 from slowapi import Limiter
-
-from app.api.security import ANONYMOUS, principal_for_key
 
 
 def rate_limit_key(request: Request) -> str:
     """Limit per credential where one is presented, per client IP otherwise.
 
     Keying on the credential means one caller cannot multiply their quota
-    by rotating source addresses.
+    by rotating source addresses. The credential is hashed rather than
+    used directly, so it never reaches the limiter's storage or logs.
     """
+
+    authorization = request.headers.get("Authorization", "")
+    scheme, _, token = authorization.partition(" ")
+
+    if scheme.lower() == "bearer" and token.strip():
+        return "tok:" + hashlib.sha256(token.strip().encode("utf-8")).hexdigest()[:32]
 
     api_key = request.headers.get("X-API-Key")
 
     if api_key:
-        return principal_for_key(api_key)
+        return "key:" + hashlib.sha256(api_key.encode("utf-8")).hexdigest()[:32]
 
     client = request.client
 
-    return f"ip:{client.host}" if client else ANONYMOUS
+    # Sign-in attempts arrive without a credential by definition, so the
+    # address is the only thing left to limit them by.
+    return f"ip:{client.host}" if client else "ip:unknown"
 
 
 limiter = Limiter(key_func=rate_limit_key, headers_enabled=True)

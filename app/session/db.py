@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -29,6 +30,53 @@ def utcnow() -> datetime:
 
 class Base(DeclarativeBase):
     pass
+
+
+class User(Base):
+    """A person with an account.
+
+    Passwords are never stored - only a scrypt hash with a per-user salt
+    and a server-side pepper from SECRET_KEY. Sessions in chat_sessions
+    are namespaced by "user:<id>", so deleting a user's rows is a single
+    scoped delete.
+    """
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Stored lowercase so "Alice" and "alice" cannot both be registered.
+    username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(64), default="")
+
+    password_hash: Mapped[str] = mapped_column(String(255))
+    password_salt: Mapped[str] = mapped_column(String(64))
+
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    @property
+    def owner_key(self) -> str:
+        return f"user:{self.id}"
+
+
+class AuthToken(Base):
+    """An issued sign-in token.
+
+    Only a hash of the token is stored, so a database leak does not hand
+    over live sessions. Rows are revocable and expire, which a stateless
+    JWT would not be without extra machinery.
+    """
+
+    __tablename__ = "auth_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class ChatSession(Base):

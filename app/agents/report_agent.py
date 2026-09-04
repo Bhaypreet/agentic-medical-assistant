@@ -78,15 +78,48 @@ def _build_warnings(outcome: ReportOutcome) -> list[str]:
     return warnings
 
 
+def _unreadable(
+    session_id: str,
+    owner: str,
+    outcome: ReportOutcome,
+    report_id: str = "",
+) -> dict:
+    """The result for a file we could not get any lab values out of.
+
+    Reached two ways: no page yielded any text at all (a blurred photo, a
+    scan with no text layer), or pages were read but held no recognisable
+    laboratory values. Both are ordinary user situations rather than
+    errors, so they return guidance instead of failing the job.
+    """
+
+    session_manager.save_report_data(session_id, [], NO_VALUES_MESSAGE, owner=owner)
+
+    return {
+        "report_id": report_id,
+        "analysis": [],
+        "summary": NO_VALUES_MESSAGE,
+        "outcome": outcome.as_dict(),
+    }
+
+
 def report_agent(file_path: str, session_id: str, owner: str = ANONYMOUS) -> dict:
 
     pages = extract_report_pages(file_path)
 
     outcome = ReportOutcome(pages_total=len(pages))
 
-    # Raises when no page yielded any text, so an unreadable file is
-    # reported rather than indexed as nothing.
-    report_id = ingest_report(pages)
+    try:
+        report_id = ingest_report(pages)
+    except ValueError:
+        # No page yielded any text at all - a blurred photo, a scan with
+        # no text layer, or a file that is not a report. This is the most
+        # likely real failure, so it gets the guidance message rather than
+        # a generic "processing failed".
+        logger.info(
+            "Upload contained no readable text",
+            extra={"pages_total": outcome.pages_total},
+        )
+        return _unreadable(session_id, owner, outcome)
 
     session_manager.save_report(session_id, report_id, owner=owner)
 
@@ -136,14 +169,7 @@ def report_agent(file_path: str, session_id: str, owner: str = ANONYMOUS) -> dic
             extra={"pages_total": outcome.pages_total, "pages_failed": outcome.pages_failed},
         )
 
-        session_manager.save_report_data(session_id, [], NO_VALUES_MESSAGE, owner=owner)
-
-        return {
-            "report_id": report_id,
-            "analysis": [],
-            "summary": NO_VALUES_MESSAGE,
-            "outcome": outcome.as_dict(),
-        }
+        return _unreadable(session_id, owner, outcome, report_id=report_id)
 
     summary = generate_summary(analyses, warnings=outcome.warnings)
 

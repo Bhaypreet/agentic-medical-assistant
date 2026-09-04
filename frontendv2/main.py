@@ -1,6 +1,7 @@
 import streamlit as st
 
 import api
+from components.auth_gate import require_sign_in
 from components.chat import render_messages
 from components.dashboards import render_dashboard
 from components.health_summary import show_summary
@@ -16,6 +17,11 @@ st.set_page_config(
 )
 
 st.markdown(CSS, unsafe_allow_html=True)
+
+# Nothing below renders until there is a signed-in user, so no request is
+# ever made without a credential.
+if not require_sign_in():
+    st.stop()
 
 
 if "current_chat" not in st.session_state:
@@ -70,6 +76,7 @@ with chat_tab:
 
     if chat.get("suggestions") and not pending_prompt:
         st.caption("💡 You might also ask:")
+
         columns = st.columns(len(chat["suggestions"]))
 
         for index, suggestion in enumerate(chat["suggestions"]):
@@ -189,6 +196,10 @@ with chat_tab:
                     elif event == "error":
                         raise api.ApiError(payload.get("detail", "Something went wrong."))
 
+            except api.AuthRequired as error:
+                placeholder.error(str(error))
+                st.session_state.pop("auth_token", None)
+                st.rerun()
             except api.ApiError as error:
                 answer = ""
                 placeholder.error(str(error))

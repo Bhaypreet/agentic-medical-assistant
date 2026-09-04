@@ -109,3 +109,39 @@ def test_summary_agent_refuses_an_empty_analysis():
 
     with pytest.raises(ValueError):
         generate_summary([])
+
+
+def test_unreadable_file_returns_guidance_not_a_job_failure(session_id):
+    """A blurred photo is the most likely real failure.
+
+    ingest_report raises when no page yields any text. That used to escape
+    report_agent and fail the whole job with a generic message, so the
+    guidance written for exactly this case was unreachable.
+    """
+
+    with (
+        patch.object(module, "extract_report_pages", return_value=[{"page": 1, "text": ""}]),
+        patch.object(module, "ingest_report", side_effect=ValueError("no readable text")),
+        patch.object(module, "generate_summary") as summary,
+    ):
+        result = module.report_agent("blurry.png", session_id)
+
+    summary.assert_not_called()
+    assert result["analysis"] == []
+    assert "Could not read this report" in result["summary"]
+    assert "blurred" in result["summary"]
+    assert result["report_id"] == ""
+
+
+def test_unreadable_file_is_persisted_so_the_user_can_see_it(session_id):
+    from app.session.session_manager import session_manager
+
+    with (
+        patch.object(module, "extract_report_pages", return_value=[{"page": 1, "text": ""}]),
+        patch.object(module, "ingest_report", side_effect=ValueError("no readable text")),
+    ):
+        module.report_agent("blurry.png", session_id)
+
+    stored = session_manager.get_report_data(session_id)
+    assert stored["analysis"] == []
+    assert "Could not read this report" in stored["summary"]

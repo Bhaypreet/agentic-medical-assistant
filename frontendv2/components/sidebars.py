@@ -1,5 +1,6 @@
 import streamlit as st
 
+from components.auth_gate import current_user, sign_out
 from utils.storage import create_chat, delete_chat, load_all_chats
 
 
@@ -46,5 +47,14 @@ def render_sidebar() -> None:
                     st.rerun()
 
         st.markdown("---")
+
+        user = current_user()
+
+        if user:
+            st.caption(f"Signed in as **{user['display_name']}**")
+
+            if st.button("Sign out", use_container_width=True):
+                sign_out()
+
         st.caption("🌐 Replies in the language you write in.")
         st.caption("⚠️ Informational only — not a medical diagnosis.")
