@@ -43,12 +43,18 @@ RUN useradd --create-home --shell /usr/sbin/nologin appuser \
     && mkdir -p /app/uploads /app/report_vectorstore /app/data_store \
     && chown -R appuser:appuser /app/uploads /app/report_vectorstore /app/data_store
 
+# The service runs as appuser, but WORKDIR /app is root-owned, so the
+# default DATABASE_URL of "sqlite:///./sessions.db" could not be created
+# and the container died in init_db() at startup. Point it at the writable
+# directory created above. Set DATABASE_URL to a Postgres URL to override.
+ENV DATABASE_URL=sqlite:////app/data_store/sessions.db
+
 USER appuser
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-    CMD curl -fsS http://localhost:8000/health || exit 1
+    CMD curl -fsS http://localhost:${PORT:-8000}/health || exit 1
 
 # gunicorn supervises uvicorn workers, so one crashed worker is replaced
 # instead of taking the container down. --proxy-headers lets the app see
@@ -57,7 +63,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
 CMD ["sh", "-c", "gunicorn app.api.main:app \
     --worker-class uvicorn.workers.UvicornWorker \
     --workers ${WEB_CONCURRENCY:-2} \
-    --bind 0.0.0.0:8000 \
+    --bind 0.0.0.0:${PORT:-8000} \
     --timeout 120 \
     --graceful-timeout 30 \
     --access-logfile - \
