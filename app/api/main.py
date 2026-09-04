@@ -10,6 +10,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
+from app.api.auth_routes import router as auth_router
 from app.api.rate_limit import limiter
 from app.api.routes import router
 from app.config import settings
@@ -109,7 +110,7 @@ app.add_middleware(
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["Content-Type", "X-API-Key"],
+    allow_headers=["Content-Type", "X-API-Key", "Authorization"],
 )
 
 
@@ -166,4 +167,5 @@ async def unhandled_exception_handler(_request: Request, _exc: Exception):
     )
 
 
+app.include_router(auth_router)
 app.include_router(router)

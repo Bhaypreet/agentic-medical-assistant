@@ -36,14 +36,37 @@ class Settings(BaseSettings):
         description="Groq API key. Required - the service cannot start without it.",
     )
 
-    # Comma-separated list of keys accepted on the X-API-Key header.
-    # Empty in development means auth is disabled; empty in production is
-    # rejected by the validator below.
+    # Comma-separated machine keys accepted on the X-API-Key header. These
+    # are for service-to-service callers, not people - a human signs in
+    # with a username and password and gets a bearer token instead.
     api_keys: str = ""
 
     @property
     def allowed_api_keys(self) -> set[str]:
         return {key.strip() for key in self.api_keys.split(",") if key.strip()}
+
+    # -------------------------------------------------- accounts
+
+    # Server-side pepper mixed into every password hash and used to derive
+    # token lookup hashes. Rotating it invalidates all passwords and
+    # sessions, so treat it as permanent for a deployment.
+    secret_key: str = ""
+
+    auth_token_ttl_hours: int = 24 * 14
+    min_password_length: int = 10
+    max_password_length: int = 128
+    allow_registration: bool = True
+    login_rate_limit: str = "10/minute"
+
+    @field_validator("secret_key")
+    @classmethod
+    def _production_requires_a_secret(cls, value: str, info) -> str:
+        if info.data.get("environment") == "production" and len(value.strip()) < 32:
+            raise ValueError(
+                "SECRET_KEY must be set to at least 32 characters in production - "
+                "it is the pepper for every stored password hash."
+            )
+        return value
 
     # -------------------------------------------------- model
 
@@ -110,16 +133,9 @@ class Settings(BaseSettings):
             )
         return value
 
-    @field_validator("api_keys")
-    @classmethod
-    def _production_requires_api_keys(cls, value: str, info) -> str:
-        configured = [key.strip() for key in value.split(",") if key.strip()]
-        if info.data.get("environment") == "production" and not configured:
-            raise ValueError(
-                "API_KEYS must be set in production - the service would "
-                "otherwise serve patient data to unauthenticated callers."
-            )
-        return value
+    # API_KEYS is no longer required in production. Every data endpoint
+    # now demands a signed-in user or a machine key unconditionally, so
+    # there is no configuration that leaves the service open.
 
 
 @lru_cache(maxsize=1)
