@@ -63,3 +63,29 @@ def test_cors_origins_are_split_and_trimmed():
 def test_a_missing_api_key_is_fatal():
     with pytest.raises(ValueError):
         Settings(_env_file=None, groq_api_key=None)
+
+
+@pytest.mark.parametrize(
+    ("given", "expected"),
+    [
+        # Render and Heroku hand out "postgres://", which SQLAlchemy 2.0
+        # rejects outright, so it must be rewritten rather than pasted in.
+        (
+            "postgres://u:p@host:5432/db",
+            "postgresql+psycopg://u:p@host:5432/db",
+        ),
+        (
+            "postgresql://u:p@host:5432/db",
+            "postgresql+psycopg://u:p@host:5432/db",
+        ),
+        # An explicit driver is left alone.
+        (
+            "postgresql+psycopg://u:p@host:5432/db",
+            "postgresql+psycopg://u:p@host:5432/db",
+        ),
+        ("sqlite:///./sessions.db", "sqlite:///./sessions.db"),
+        ("  sqlite:///:memory:  ", "sqlite:///:memory:"),
+    ],
+)
+def test_database_url_is_normalised(given, expected):
+    assert _settings(database_url=given).database_url == expected
