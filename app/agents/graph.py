@@ -1,94 +1,139 @@
+"""The routing graph.
+
+Every node reads state with .get() and the initial state is built by one
+factory, because the invoke payload used to omit `specialist` while
+doctor_node and ask_location_node read state["specialist"] directly. That
+only worked because a single inbound edge happened to set it first - one
+new edge into either node turned it into a KeyError at runtime.
+"""
+
 import re
-from typing import TypedDict
+from typing import Any, TypedDict
 
-from langgraph.graph import StateGraph
-from langgraph.graph import START, END
+from langgraph.graph import END, START, StateGraph
 
-from app.supervisor.supervisor import classify_intent
-from app.session.session_manager import session_manager
-
-from app.tools.severity_classifier import classify_severity
-from app.tools.doctor_finder import find_doctors
-from app.llm.model import safe_invoke
-
-from app.rag.chain import medical_rag
-
+from app.agents.diet_agents import diet_agent
 from app.agents.report_agent import report_agent
 from app.agents.report_chat_agent import report_chat_agent
-from app.agents.diet_agents import diet_agent
+from app.llm.model import safe_invoke
+from app.logging_config import get_logger
+from app.rag.chain import medical_rag
+from app.session.session_manager import ANONYMOUS, session_manager
+from app.supervisor.supervisor import classify_intent
+from app.tools.doctor_finder import LookupFailed, find_doctors
+from app.tools.severity_classifier import classify_severity
+
+logger = get_logger(__name__)
 
 
-# =====================================================
-# STATE
-# =====================================================
-
-class MedicalState(TypedDict):
+class MedicalState(TypedDict, total=False):
     query: str
     pdf_path: str
-
     session_id: str
+    owner: str
     report_id: str
-
     location: str
-
     severity: int
+    emergency: bool
     specialist: str
-
     report_analysis: list
-
     response: str
-
     chat_history: list
+
+
+def build_state(
+    query: str,
+    session_id: str,
+    owner: str = ANONYMOUS,
+    location: str = "",
+    pdf_path: str = "",
+    chat_history: list | None = None,
+) -> MedicalState:
+    """The one place an initial state is constructed, so every key exists."""
+
+    return {
+        "query": query,
+        "pdf_path": pdf_path,
+        "session_id": session_id,
+        "owner": owner,
+        "report_id": "",
+        "location": location,
+        "severity": 0,
+        "emergency": False,
+        "specialist": "",
+        "report_analysis": [],
+        "response": "",
+        "chat_history": chat_history or [],
+    }
+
+
+def _ctx(state: MedicalState) -> tuple[str, str]:
+    return state.get("session_id", ""), state.get("owner", ANONYMOUS)
 
 
 # =====================================================
 # SUPERVISOR
 # =====================================================
 
-def supervisor_node(state: MedicalState):
 
-    return classify_intent(
-        query=state["query"],
-        session_id=state["session_id"],
-        pdf_path=state["pdf_path"]
+def supervisor_node(state: MedicalState) -> str:
+
+    session_id, owner = _ctx(state)
+
+    intent = classify_intent(
+        query=state.get("query", ""),
+        session_id=session_id,
+        pdf_path=state.get("pdf_path", ""),
+        owner=owner,
     )
+
+    logger.info("Routed message", extra={"intent": intent})
+
+    return intent
 
 
 # =====================================================
 # GREETING
 # =====================================================
 
-def greeting_node(state: MedicalState):
 
-    return {
-        "response": """
-Hello 👋
+GREETING = """Hello 👋
 
 I am your AI Medical Assistant.
 
 I can help you with:
 
-- Medical Questions
-- Symptom Analysis
-- Blood Report Analysis (PDF or photo)
-- Diet & Nutrition Plans
-- Chat with Uploaded Reports
-- Doctor Recommendations
-"""
-    }
+- Medical questions
+- Symptom analysis
+- Blood report analysis (PDF or photo)
+- Diet and nutrition plans
+- Chat with an uploaded report
+- Finding nearby hospitals and clinics
+
+If you think you are having a medical emergency, call your local emergency
+number instead of using this chat."""
+
+
+def greeting_node(state: MedicalState) -> dict[str, Any]:
+    return {"response": GREETING}
 
 
 # =====================================================
-# CLARIFICATION - agent asks ONE follow-up question
-# before triaging, like a real doctor would
+# CLARIFICATION - one follow-up question before triage
 # =====================================================
 
-def ask_clarification_node(state: MedicalState):
 
-    session_id = state["session_id"]
-    query = state["query"]
+CLARIFY_FALLBACK = (
+    "How long have you had this, and is there anything else you're feeling alongside it?"
+)
 
-    session_manager.set_pending_clarification(session_id, query)
+
+def ask_clarification_node(state: MedicalState) -> dict[str, Any]:
+
+    session_id, owner = _ctx(state)
+    query = state.get("query", "")
+
+    session_manager.set_pending_clarification(session_id, query, owner=owner)
 
     prompt = f"""A patient just said: "{query}"
 
@@ -100,152 +145,184 @@ else."""
     try:
         question = safe_invoke(prompt).content.strip()
     except Exception:
-        question = "How long have you had this, and is there anything else you're feeling alongside it?"
+        logger.exception("Clarification question generation failed")
+        question = CLARIFY_FALLBACK
 
-    return {"response": question}
+    return {"response": question or CLARIFY_FALLBACK}
 
 
-def clarify_answer_node(state: MedicalState):
+def clarify_answer_node(state: MedicalState) -> dict[str, Any]:
 
-    session_id = state["session_id"]
+    session_id, owner = _ctx(state)
 
-    original_query = session_manager.get_pending_clarification(session_id)
-    session_manager.clear_pending_clarification(session_id)
+    original = session_manager.get_pending_clarification(session_id, owner=owner)
+    session_manager.clear_pending_clarification(session_id, owner=owner)
 
-    combined_query = f"{original_query}. Additional details: {state['query']}"
+    combined = (
+        f"{original}. Additional details: {state.get('query', '')}"
+        if original
+        else state.get("query", "")
+    )
 
-    result = classify_severity(combined_query)
+    result = classify_severity(combined)
+
+    conditions = ", ".join(result.get("possible_conditions") or []) or "Not enough information yet"
+
+    response = f"""## Assessment
+
+**Risk level:** {result["risk_level"]}
+
+**Suggested specialist:** {result["specialist"]}
+
+**Possible causes:** {conditions}
+
+**Why:** {result["reasoning"]}"""
 
     return {
-        "query": combined_query,
+        "query": combined,
         "severity": result["severity"],
+        "emergency": result["emergency"],
         "specialist": result["specialist"],
-        "response": f"""
-Risk Level: {result['risk_level']}
-
-Emergency: {result['emergency']}
-
-Recommended Specialist:
-{result['specialist']}
-
-Possible Conditions:
-{", ".join(result['possible_conditions'])}
-
-Reason:
-{result['reasoning']}
-"""
+        "response": response,
     }
 
 
 # =====================================================
-# MEDICAL RAG (general questions)
+# GENERAL KNOWLEDGE / DIET
 # =====================================================
 
-def rag_node(state: MedicalState):
 
-    answer = medical_rag(
-        state["query"],
-        chat_history=state.get("chat_history", [])
-    )
-
-    return {"response": answer}
+def rag_node(state: MedicalState) -> dict[str, Any]:
+    return {"response": medical_rag(state.get("query", ""), chat_history=state.get("chat_history"))}
 
 
-# =====================================================
-# DIET / NUTRITION AGENT
-# =====================================================
+def diet_node(state: MedicalState) -> dict[str, Any]:
 
-def diet_node(state: MedicalState):
-
-    answer = diet_agent(
-        session_id=state["session_id"],
-        query=state["query"],
-        chat_history=state.get("chat_history", [])
-    )
-
-    return {"response": answer}
-
-
-# =====================================================
-# ASK FOR LOCATION
-# (severity is high, but we don't have a location yet)
-# =====================================================
-
-def ask_location_node(state: MedicalState):
-
-    specialist = state["specialist"]
-
-    session_manager.set_pending_specialist(state["session_id"], specialist)
+    session_id, owner = _ctx(state)
 
     return {
-        "response": f"""⚠️ This sounds like it could be serious — a **{specialist}** is recommended.
-
-📍 Please reply with your current location (city or area) so I can find nearby {specialist}s for you.
-"""
+        "response": diet_agent(
+            session_id=session_id,
+            query=state.get("query", ""),
+            chat_history=state.get("chat_history"),
+            owner=owner,
+        )
     }
 
 
 # =====================================================
-# DOCTOR FINDER (severity high + location already given)
+# FACILITY LOOKUP
 # =====================================================
 
-def doctor_node(state: MedicalState):
 
-    specialist = state["specialist"]
-    location = state["location"]
+LOOKUP_UNAVAILABLE = (
+    "⚠️ I couldn't reach the hospital directory just now. Please try again in a "
+    "moment - and if this feels urgent, call your local emergency number rather "
+    "than waiting."
+)
+
+
+def _keep_assessment(state: MedicalState, addition: str) -> str:
+    """Append to the triage assessment rather than discarding it.
+
+    Routing from clarify_answer_node used to overwrite `response`, so the
+    patient never saw the risk level that triggered the escalation.
+    """
+
+    existing = (state.get("response") or "").strip()
+
+    return f"{existing}\n\n---\n\n{addition}" if existing else addition
+
+
+def ask_location_node(state: MedicalState) -> dict[str, Any]:
+
+    session_id, owner = _ctx(state)
+    specialist = state.get("specialist") or "General Physician"
+
+    session_manager.set_pending_specialist(session_id, specialist, owner=owner)
+
+    return {
+        "response": _keep_assessment(
+            state,
+            f"A **{specialist}** is the right person to see for this.\n\n"
+            f"📍 Reply with your city or area and I'll find nearby options.",
+        )
+    }
+
+
+def _lookup(location: str, specialist: str) -> dict[str, Any]:
+    """Shared lookup so every entry point handles failure the same way."""
 
     try:
         doctors = find_doctors(location, specialist)
-    except Exception as e:
-        return {"response": f"⚠️ Could not fetch nearby doctors right now ({e}). Please try again."}
+    except LookupFailed:
+        logger.warning("Facility lookup unavailable")
+        return {"response": LOOKUP_UNAVAILABLE, "found": False, "reachable": False}
+    except Exception:
+        logger.exception("Facility lookup failed unexpectedly")
+        return {"response": LOOKUP_UNAVAILABLE, "found": False, "reachable": False}
 
-    return {"response": _format_doctor_response(doctors, specialist)}
+    return {
+        "response": _format_doctor_response(doctors, specialist, location),
+        "found": bool(doctors),
+        "reachable": True,
+    }
 
 
-# =====================================================
-# RESUME DOCTOR FINDER
-# (user just replied with their location after being asked)
-# =====================================================
+def doctor_node(state: MedicalState) -> dict[str, Any]:
 
-def resume_doctor_node(state: MedicalState):
+    specialist = state.get("specialist") or "General Physician"
+    outcome = _lookup(state.get("location", ""), specialist)
 
-    session_id = state["session_id"]
+    return {"response": _keep_assessment(state, outcome["response"])}
 
-    specialist = session_manager.get_pending_specialist(session_id)
 
-    raw_location = state["query"]
-    location = re.sub(
-        r"(?i)^(my location is|i am in|i'm in|located at|location is|i am at)\s*",
-        "",
-        raw_location
-    ).strip(" .?!")
+def resume_doctor_node(state: MedicalState) -> dict[str, Any]:
+    """Handle the patient's reply to "which city are you in?"."""
+
+    session_id, owner = _ctx(state)
+
+    specialist = session_manager.get_pending_specialist(session_id, owner=owner)
 
     if not specialist:
-        return {"response": "I lost track of what specialist we needed - could you describe your symptom again?"}
+        return {
+            "response": (
+                "Sorry - I've lost track of what we were looking for. "
+                "Could you describe your symptom again?"
+            )
+        }
 
-    try:
-        doctors = find_doctors(location, specialist)
-    except Exception as e:
-        return {"response": f"⚠️ Could not fetch nearby doctors right now ({e}). Please try again."}
+    location = re.sub(
+        r"(?i)^(my location is|i am in|i'm in|located at|location is|i am at|in)\s*",
+        "",
+        state.get("query", ""),
+    ).strip(" .?!")
 
-    if doctors:
-        session_manager.clear_pending_specialist(session_id)
+    outcome = _lookup(location, specialist)
 
-    return {"response": _format_doctor_response(doctors, specialist)}
+    # Previously this only cleared on success, so a lookup that returned
+    # nothing left the session waiting for a location forever and every
+    # later message was misread as a location reply. Clear it whenever the
+    # directory answered at all; keep waiting only if it was unreachable.
+    if outcome["reachable"]:
+        session_manager.clear_pending_specialist(session_id, owner=owner)
+
+    return {"response": outcome["response"]}
 
 
-# =====================================================
-# EXPLICIT HOSPITAL/DOCTOR SEARCH
-# (user directly asks "hospitals near X" / "doctor near me" etc,
-# with no prior severity flow - always uses the real Maps tool,
-# never lets the LLM invent names)
-# =====================================================
-
+# fmt: off
 _GENERIC_TERMS = {
     "hospital", "hospitals", "doctor", "doctors", "clinic", "clinics",
     "specialist", "cardiologist", "dermatologist", "dentist", "neurologist",
-    "orthopedic", "gynecologist", "pediatrician", "ent specialist", "me", "us"
+    "orthopedic", "gynecologist", "pediatrician", "ent specialist", "me", "us",
+    "here", "somewhere",
 }
+
+_SPECIALISTS = [
+    "cardiologist", "dermatologist", "dentist", "neurologist",
+    "orthopedic", "gynecologist", "pediatrician", "ent specialist",
+]
+# fmt: on
 
 
 def _extract_location_from_query(query: str) -> str:
@@ -255,176 +332,172 @@ def _extract_location_from_query(query: str) -> str:
     if not match:
         return ""
 
-    candidate = match.group(1).strip(" .?!").lower()
+    candidate = match.group(1).strip(" .?!")
+    words = candidate.lower().split()
 
-    if candidate in _GENERIC_TERMS:
+    if not words or all(word in _GENERIC_TERMS for word in words):
         return ""
 
-    words = candidate.split()
-    if words and all(w in _GENERIC_TERMS for w in words):
-        return ""
-
-    return match.group(1).strip(" .?!")
+    return candidate
 
 
-def hospital_search_node(state: MedicalState):
+def hospital_search_node(state: MedicalState) -> dict[str, Any]:
 
-    query = state["query"]
+    session_id, owner = _ctx(state)
+    query = state.get("query", "")
 
-    specialist = "hospital"
-    for word in ["cardiologist", "dermatologist", "dentist", "neurologist",
-                 "orthopedic", "gynecologist", "pediatrician", "ent specialist"]:
-        if word in query.lower():
-            specialist = word
-            break
+    specialist = next((word for word in _SPECIALISTS if word in query.lower()), "hospital")
 
     location = _extract_location_from_query(query)
 
     if not location:
-        session_manager.set_pending_specialist(state["session_id"], specialist)
-        return {"response": "📍 Sure - which city/area should I search near?"}
+        session_manager.set_pending_specialist(session_id, specialist, owner=owner)
+        return {"response": "📍 Sure - which city or area should I search near?"}
 
-    try:
-        doctors = find_doctors(location, specialist)
-    except Exception as e:
-        return {"response": f"⚠️ Could not fetch nearby results right now ({e}). Please try again."}
-
-    return {"response": _format_doctor_response(doctors, specialist)}
+    return {"response": _lookup(location, specialist)["response"]}
 
 
-def _format_doctor_response(doctors, specialist):
+def _format_doctor_response(doctors: list[dict], specialist: str, location: str) -> str:
 
-    if len(doctors) == 0:
-        return f"No nearby {specialist}s found. Please try a nearby bigger city/area name."
+    if not doctors:
+        return (
+            f"I couldn't find any {specialist}s listed near **{location}**.\n\n"
+            "The directory's coverage varies by area - try a nearby larger town "
+            "or city name."
+        )
 
-    response = f"## Recommended {specialist.title()}s Near You\n\n"
+    lines = [f"## {specialist.title()}s near {location}\n"]
 
     for doctor in doctors:
         lat = doctor["location"]["lat"]
         lng = doctor["location"]["lng"]
-        maps_link = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}"
 
-        response += (
-            f"🏥 **{doctor['name']}**\n"
-            f"⭐ Rating: {doctor['rating']}\n"
-            f"📍 {doctor['address']}\n"
-            f"🗺 {maps_link}\n\n"
-        )
+        lines.append(f"🏥 **{doctor['name']}** — {doctor['distance_km']} km away")
+        lines.append(f"📍 {doctor['address']}")
 
-    return response
+        if doctor.get("phone"):
+            lines.append(f"📞 {doctor['phone']}")
+
+        lines.append(f"🗺 https://www.google.com/maps/search/?api=1&query={lat},{lng}\n")
+
+    lines.append(
+        "_Listings come from OpenStreetMap and may be out of date. Please call ahead to confirm._"
+    )
+
+    return "\n".join(lines)
 
 
 # =====================================================
-# REPORT UPLOAD
+# REPORTS
 # =====================================================
 
-def report_node(state: MedicalState):
+
+def report_node(state: MedicalState) -> dict[str, Any]:
+
+    session_id, owner = _ctx(state)
 
     result = report_agent(
-        file_path=state["pdf_path"],
-        session_id=state["session_id"]
+        file_path=state.get("pdf_path", ""),
+        session_id=session_id,
+        owner=owner,
     )
 
     return {
         "report_analysis": result["analysis"],
-        "report_id": result["report_id"]
+        "report_id": result["report_id"],
+        "response": result["summary"],
+    }
+
+
+def report_chat_node(state: MedicalState) -> dict[str, Any]:
+
+    session_id, owner = _ctx(state)
+
+    return {
+        "response": report_chat_agent(
+            session_id=session_id,
+            question=state.get("query", ""),
+            chat_history=state.get("chat_history"),
+            owner=owner,
+        )
     }
 
 
 # =====================================================
-# REPORT CHAT
+# SEVERITY ROUTING
 # =====================================================
 
-def report_chat_node(state: MedicalState):
 
-    answer = report_chat_agent(
-        session_id=state["session_id"],
-        question=state["query"],
-        chat_history=state.get("chat_history", [])
-    )
+def severity_router(state: MedicalState) -> str:
 
-    return {"response": answer}
-
-
-# =====================================================
-# SEVERITY ROUTER
-# =====================================================
-
-def severity_router(state: MedicalState):
-
-    if state["severity"] <= 2:
+    if state.get("severity", 0) <= 2:
         return "rag"
-    if state.get("location"):
-        return "doctor"
-    return "ask_location"
+
+    return "doctor" if state.get("location") else "ask_location"
 
 
 # =====================================================
 # GRAPH
 # =====================================================
 
-graph_builder = StateGraph(MedicalState)
+
+def _build_graph():
+
+    builder = StateGraph(MedicalState)
+
+    builder.add_node("greeting_node", greeting_node)
+    builder.add_node("ask_clarification_node", ask_clarification_node)
+    builder.add_node("clarify_answer_node", clarify_answer_node)
+    builder.add_node("rag_node", rag_node)
+    builder.add_node("diet_node", diet_node)
+    builder.add_node("doctor_node", doctor_node)
+    builder.add_node("ask_location_node", ask_location_node)
+    builder.add_node("resume_doctor_node", resume_doctor_node)
+    builder.add_node("hospital_search_node", hospital_search_node)
+    builder.add_node("report_node", report_node)
+    builder.add_node("report_chat_node", report_chat_node)
+
+    builder.add_conditional_edges(
+        START,
+        supervisor_node,
+        {
+            "greeting": "greeting_node",
+            "symptom": "ask_clarification_node",
+            "clarify_answer": "clarify_answer_node",
+            "report_upload": "report_node",
+            "report_chat": "report_chat_node",
+            "provide_location": "resume_doctor_node",
+            "hospital_search": "hospital_search_node",
+            "diet": "diet_node",
+            "general": "rag_node",
+        },
+    )
+
+    builder.add_conditional_edges(
+        "clarify_answer_node",
+        severity_router,
+        {
+            "rag": "rag_node",
+            "doctor": "doctor_node",
+            "ask_location": "ask_location_node",
+        },
+    )
+
+    for node in (
+        "greeting_node",
+        "ask_clarification_node",
+        "rag_node",
+        "diet_node",
+        "doctor_node",
+        "ask_location_node",
+        "resume_doctor_node",
+        "hospital_search_node",
+        "report_node",
+        "report_chat_node",
+    ):
+        builder.add_edge(node, END)
+
+    return builder.compile()
 
 
-# ---------------- Nodes ----------------
-
-graph_builder.add_node("greeting_node", greeting_node)
-graph_builder.add_node("ask_clarification_node", ask_clarification_node)
-graph_builder.add_node("clarify_answer_node", clarify_answer_node)
-graph_builder.add_node("rag_node", rag_node)
-graph_builder.add_node("diet_node", diet_node)
-graph_builder.add_node("doctor_node", doctor_node)
-graph_builder.add_node("ask_location_node", ask_location_node)
-graph_builder.add_node("resume_doctor_node", resume_doctor_node)
-graph_builder.add_node("hospital_search_node", hospital_search_node)
-graph_builder.add_node("report_node", report_node)
-graph_builder.add_node("report_chat_node", report_chat_node)
-
-
-# ---------------- Start Routing ----------------
-
-graph_builder.add_conditional_edges(
-    START,
-    supervisor_node,
-    {
-        "greeting": "greeting_node",
-        "symptom": "ask_clarification_node",
-        "clarify_answer": "clarify_answer_node",
-        "report_upload": "report_node",
-        "report_chat": "report_chat_node",
-        "provide_location": "resume_doctor_node",
-        "hospital_search": "hospital_search_node",
-        "diet": "diet_node",
-        "general": "rag_node"
-    }
-)
-
-
-# ---------------- Severity Routing (after clarification) ----------------
-
-graph_builder.add_conditional_edges(
-    "clarify_answer_node",
-    severity_router,
-    {
-        "rag": "rag_node",
-        "doctor": "doctor_node",
-        "ask_location": "ask_location_node"
-    }
-)
-
-
-# ---------------- End ----------------
-
-graph_builder.add_edge("greeting_node", END)
-graph_builder.add_edge("ask_clarification_node", END)
-graph_builder.add_edge("rag_node", END)
-graph_builder.add_edge("diet_node", END)
-graph_builder.add_edge("doctor_node", END)
-graph_builder.add_edge("ask_location_node", END)
-graph_builder.add_edge("resume_doctor_node", END)
-graph_builder.add_edge("hospital_search_node", END)
-graph_builder.add_edge("report_node", END)
-graph_builder.add_edge("report_chat_node", END)
-
-
-graph = graph_builder.compile()
+graph = _build_graph()

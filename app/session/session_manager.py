@@ -1,121 +1,333 @@
-import json
-import os
+"""Session state, backed by a database.
 
-SESSIONS_FILE = "sessions_store.json"
+The previous implementation kept every session in one JSON file that was
+loaded once at import, mutated in memory and fully rewritten on every
+message. That failed in four separate ways: a second worker got a
+divergent in-memory copy, a crash mid-write truncated every session, the
+threadpool that runs FastAPI's sync endpoints raced on both the dict and
+the file, and an ephemeral container filesystem lost all of it on restart.
+
+The public method names are unchanged so callers did not have to move in
+the same commit, but every read now takes an `owner` so that knowing a
+session id is not sufficient to read someone else's data.
+"""
+
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
+from sqlalchemy import select
+
+from app.config import settings
+from app.logging_config import get_logger
+from app.session.db import ChatMessage, ChatSession, SessionLocal, utcnow
+
+logger = get_logger(__name__)
+
+ANONYMOUS = "anonymous"
+
+
+def _as_utc(value: datetime | None) -> datetime | None:
+    """SQLite drops the timezone on round-trip; treat naive values as UTC."""
+
+    if value is None:
+        return None
+
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+
+    return value
+
+
+class SessionNotFound(Exception):
+    """Raised when a session does not exist, or is not owned by the caller."""
 
 
 class SessionManager:
+    # ------------------------------------------------------------------
+    # internals
+    # ------------------------------------------------------------------
 
-    def __init__(self):
-        self.sessions = self._load()
+    def _get(self, db, session_id: str, owner: str) -> ChatSession | None:
+        return db.scalar(
+            select(ChatSession).where(
+                ChatSession.id == session_id,
+                ChatSession.owner == owner,
+            )
+        )
 
-    def _load(self):
-        if os.path.exists(SESSIONS_FILE):
-            try:
-                with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception:
-                return {}
-        return {}
+    def _get_or_create(self, db, session_id: str, owner: str) -> ChatSession:
 
-    def _persist(self):
-        with open(SESSIONS_FILE, "w", encoding="utf-8") as f:
-            json.dump(self.sessions, f, indent=2)
+        record = self._get(db, session_id, owner)
 
-    def create_session(self, session_id):
+        if record is not None:
+            return record
 
-        if session_id not in self.sessions:
+        # A session id that exists under a different owner must not be
+        # silently adopted - that would be the original IDOR by another
+        # route. Reject it instead.
+        conflicting = db.scalar(select(ChatSession).where(ChatSession.id == session_id))
 
-            self.sessions[session_id] = {
-                "report_id": None,
-                "messages": [],
-                "chat_name": "New Chat",
-                "pending_specialist": None,
-                "pending_clarification": None
+        if conflicting is not None:
+            logger.warning(
+                "Rejected cross-owner session access",
+                extra={"session_id": session_id},
+            )
+            raise SessionNotFound(session_id)
+
+        record = ChatSession(id=session_id, owner=owner)
+        db.add(record)
+        db.flush()
+
+        return record
+
+    def _expire_pending(self, record: ChatSession) -> None:
+        """Drop pending flags that are older than the configured TTL.
+
+        Without this a failed doctor lookup left pending_specialist set
+        forever, and every later message was misread as a location reply.
+        """
+
+        cutoff = utcnow() - timedelta(seconds=settings.pending_state_ttl_seconds)
+
+        if _as_utc(record.pending_specialist_at) and _as_utc(record.pending_specialist_at) < cutoff:
+            record.pending_specialist = None
+            record.pending_specialist_at = None
+
+        clarified_at = _as_utc(record.pending_clarification_at)
+
+        if clarified_at and clarified_at < cutoff:
+            record.pending_clarification = None
+            record.pending_clarification_at = None
+
+    # ------------------------------------------------------------------
+    # lifecycle
+    # ------------------------------------------------------------------
+
+    def create_session(self, session_id: str, owner: str = ANONYMOUS) -> None:
+        with SessionLocal() as db:
+            self._get_or_create(db, session_id, owner)
+            db.commit()
+
+    def clear_chat(self, session_id: str, owner: str = ANONYMOUS) -> str | None:
+        """Delete a session. Returns its report_id so the caller can also
+        remove the report's vector store and uploaded file."""
+
+        with SessionLocal() as db:
+            record = self._get(db, session_id, owner)
+
+            if record is None:
+                return None
+
+            report_id = record.report_id
+            db.delete(record)
+            db.commit()
+
+            return report_id
+
+    # ------------------------------------------------------------------
+    # reports
+    # ------------------------------------------------------------------
+
+    def save_report(self, session_id: str, report_id: str, owner: str = ANONYMOUS) -> None:
+        with SessionLocal() as db:
+            record = self._get_or_create(db, session_id, owner)
+            record.report_id = report_id
+            db.commit()
+
+    def get_report(self, session_id: str, owner: str = ANONYMOUS) -> str | None:
+        with SessionLocal() as db:
+            record = self._get(db, session_id, owner)
+            return record.report_id if record else None
+
+    def save_report_data(
+        self,
+        session_id: str,
+        analysis: list,
+        summary: str,
+        owner: str = ANONYMOUS,
+    ) -> None:
+        with SessionLocal() as db:
+            record = self._get_or_create(db, session_id, owner)
+            record.report_analysis = analysis
+            record.report_summary = summary
+            db.commit()
+
+    def get_report_data(self, session_id: str, owner: str = ANONYMOUS) -> dict[str, Any]:
+        with SessionLocal() as db:
+            record = self._get(db, session_id, owner)
+
+            if record is None:
+                return {"analysis": [], "summary": ""}
+
+            return {
+                "analysis": record.report_analysis or [],
+                "summary": record.report_summary or "",
             }
-            self._persist()
 
-    def save_report(self, session_id, report_id):
-        self.create_session(session_id)
-        self.sessions[session_id]["report_id"] = report_id
-        self._persist()
+    # ------------------------------------------------------------------
+    # messages
+    # ------------------------------------------------------------------
 
-    def get_report(self, session_id):
-        self.create_session(session_id)
-        return self.sessions[session_id]["report_id"]
+    def add_message(
+        self,
+        session_id: str,
+        role: str,
+        content: str,
+        owner: str = ANONYMOUS,
+    ) -> None:
+        with SessionLocal() as db:
+            record = self._get_or_create(db, session_id, owner)
+            db.add(ChatMessage(session_id=record.id, role=role, content=content))
+            record.updated_at = utcnow()
+            db.commit()
 
-    def save_report_data(self, session_id, analysis, summary):
-        self.create_session(session_id)
-        self.sessions[session_id]["report_analysis"] = analysis
-        self.sessions[session_id]["report_summary"] = summary
-        self._persist()
+    def get_messages(
+        self,
+        session_id: str,
+        owner: str = ANONYMOUS,
+        limit: int | None = None,
+    ) -> list[dict[str, str]]:
+        """Most recent messages, oldest first.
 
-    def get_report_data(self, session_id):
-        self.create_session(session_id)
-        return {
-            "analysis": self.sessions[session_id].get("report_analysis", []),
-            "summary": self.sessions[session_id].get("report_summary", "")
-        }
+        The old implementation truncated the stored history to 20 entries,
+        destroying the conversation. Everything is retained now; the limit
+        applies only to what is handed to the model.
+        """
 
-    def add_message(self, session_id, role, content):
-        self.create_session(session_id)
-        self.sessions[session_id]["messages"].append({"role": role, "content": content})
-        self.sessions[session_id]["messages"] = self.sessions[session_id]["messages"][-20:]
-        self._persist()
+        limit = limit or settings.max_history_messages
 
-    def get_messages(self, session_id):
-        self.create_session(session_id)
-        return self.sessions[session_id]["messages"]
+        with SessionLocal() as db:
+            record = self._get(db, session_id, owner)
 
-    def set_chat_name(self, session_id, name):
-        self.create_session(session_id)
-        self.sessions[session_id]["chat_name"] = name
-        self._persist()
+            if record is None:
+                return []
 
-    def get_chat_name(self, session_id):
-        self.create_session(session_id)
-        return self.sessions[session_id]["chat_name"]
+            rows = db.scalars(
+                select(ChatMessage)
+                .where(ChatMessage.session_id == session_id)
+                .order_by(ChatMessage.id.desc())
+                .limit(limit)
+            ).all()
 
-    def get_all_sessions(self):
-        return self.sessions
+            return [{"role": row.role, "content": row.content} for row in reversed(rows)]
 
-    def clear_chat(self, session_id):
-        if session_id in self.sessions:
-            del self.sessions[session_id]
-            self._persist()
+    # ------------------------------------------------------------------
+    # naming
+    # ------------------------------------------------------------------
 
-    def set_pending_specialist(self, session_id, specialist):
-        self.create_session(session_id)
-        self.sessions[session_id]["pending_specialist"] = specialist
-        self._persist()
+    def set_chat_name(self, session_id: str, name: str, owner: str = ANONYMOUS) -> None:
+        with SessionLocal() as db:
+            record = self._get_or_create(db, session_id, owner)
+            record.chat_name = name
+            db.commit()
 
-    def get_pending_specialist(self, session_id):
-        self.create_session(session_id)
-        return self.sessions[session_id].get("pending_specialist")
+    def get_chat_name(self, session_id: str, owner: str = ANONYMOUS) -> str:
+        with SessionLocal() as db:
+            record = self._get(db, session_id, owner)
+            return record.chat_name if record else "New Chat"
 
-    def clear_pending_specialist(self, session_id):
-        self.create_session(session_id)
-        self.sessions[session_id]["pending_specialist"] = None
-        self._persist()
+    def list_sessions(self, owner: str = ANONYMOUS, limit: int = 100) -> list[dict[str, Any]]:
+        """Sessions for one owner, most recently updated first.
 
-    # -------------------------------------------------
-    # Pending Clarification (agent asks ONE follow-up
-    # question before finalizing symptom severity)
-    # -------------------------------------------------
+        Replaces get_all_sessions(), which returned every session in the
+        store to every caller with no pagination.
+        """
 
-    def set_pending_clarification(self, session_id, original_query):
-        self.create_session(session_id)
-        self.sessions[session_id]["pending_clarification"] = original_query
-        self._persist()
+        with SessionLocal() as db:
+            rows = db.scalars(
+                select(ChatSession)
+                .where(ChatSession.owner == owner)
+                .order_by(ChatSession.updated_at.desc())
+                .limit(limit)
+            ).all()
 
-    def get_pending_clarification(self, session_id):
-        self.create_session(session_id)
-        return self.sessions[session_id].get("pending_clarification")
+            return [
+                {
+                    "id": row.id,
+                    "chat_name": row.chat_name,
+                    "has_report": row.report_id is not None,
+                    "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+                }
+                for row in rows
+            ]
 
-    def clear_pending_clarification(self, session_id):
-        self.create_session(session_id)
-        self.sessions[session_id]["pending_clarification"] = None
-        self._persist()
+    # ------------------------------------------------------------------
+    # pending specialist (waiting for the patient's location)
+    # ------------------------------------------------------------------
+
+    def set_pending_specialist(
+        self,
+        session_id: str,
+        specialist: str,
+        owner: str = ANONYMOUS,
+    ) -> None:
+        with SessionLocal() as db:
+            record = self._get_or_create(db, session_id, owner)
+            record.pending_specialist = specialist
+            record.pending_specialist_at = utcnow()
+            db.commit()
+
+    def get_pending_specialist(self, session_id: str, owner: str = ANONYMOUS) -> str | None:
+        with SessionLocal() as db:
+            record = self._get(db, session_id, owner)
+
+            if record is None:
+                return None
+
+            self._expire_pending(record)
+            db.commit()
+
+            return record.pending_specialist
+
+    def clear_pending_specialist(self, session_id: str, owner: str = ANONYMOUS) -> None:
+        with SessionLocal() as db:
+            record = self._get(db, session_id, owner)
+
+            if record is None:
+                return
+
+            record.pending_specialist = None
+            record.pending_specialist_at = None
+            db.commit()
+
+    # ------------------------------------------------------------------
+    # pending clarification (one follow-up question before triage)
+    # ------------------------------------------------------------------
+
+    def set_pending_clarification(
+        self,
+        session_id: str,
+        original_query: str,
+        owner: str = ANONYMOUS,
+    ) -> None:
+        with SessionLocal() as db:
+            record = self._get_or_create(db, session_id, owner)
+            record.pending_clarification = original_query
+            record.pending_clarification_at = utcnow()
+            db.commit()
+
+    def get_pending_clarification(self, session_id: str, owner: str = ANONYMOUS) -> str | None:
+        with SessionLocal() as db:
+            record = self._get(db, session_id, owner)
+
+            if record is None:
+                return None
+
+            self._expire_pending(record)
+            db.commit()
+
+            return record.pending_clarification
+
+    def clear_pending_clarification(self, session_id: str, owner: str = ANONYMOUS) -> None:
+        with SessionLocal() as db:
+            record = self._get(db, session_id, owner)
+
+            if record is None:
+                return
+
+            record.pending_clarification = None
+            record.pending_clarification_at = None
+            db.commit()
 
 
 session_manager = SessionManager()

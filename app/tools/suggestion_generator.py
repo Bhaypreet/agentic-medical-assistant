@@ -1,4 +1,7 @@
 from app.llm.model import safe_invoke
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 SUGGESTION_PROMPT = """Based on this medical assistant conversation, suggest exactly 3 short,
 natural follow-up questions the patient might genuinely want to ask next.
@@ -15,23 +18,24 @@ Rules:
 """
 
 
-def generate_suggestions(query: str, answer: str):
+def generate_suggestions(query: str, answer: str) -> list[str]:
+    """Follow-up prompts for the UI.
+
+    Best-effort: this is the second model call per chat turn, so it never
+    fails the request and returns nothing when the model is unavailable.
+    """
 
     try:
-        prompt = SUGGESTION_PROMPT.format(
-            query=query,
-            answer=answer[:1500]
-        )
-
-        response = safe_invoke(prompt)
+        response = safe_invoke(SUGGESTION_PROMPT.format(query=query, answer=answer[:1500]))
 
         lines = [
             line.strip("-•* ").strip()
-            for line in response.content.strip().split("\n")
+            for line in (response.content or "").strip().split("\n")
             if line.strip()
         ]
 
         return lines[:3]
 
     except Exception:
+        logger.warning("Could not generate follow-up suggestions")
         return []

@@ -7,4 +7,11 @@ report_vectorstore/
 sessions_store.json
 frontendv2/sessions/
 venv/
-.venv/
+.venv/repomix-output.md
+uploads/
+*.db
+*.sqlite3
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+testpdf*.pdf

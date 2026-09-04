@@ -1,0 +1,5 @@
+# Streamlit frontend only - the API image does not need any of this.
+streamlit>=1.36,<2.0
+plotly>=5.22,<7.0
+pandas>=2.2,<4.0
+requests>=2.32,<3.0

@@ -1,0 +1,34 @@
+# The image previously copied the whole tree, including the virtualenv,
+# a 6.6MB test PDF, stored sessions and .git.
+
+.git
+.github
+.gitignore
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+frontendv2/
+tests/
+docs/
+
+uploads/
+report_vectorstore/
+vectorstore/
+sessions.db*
+sessions_store.json
+
+*.md
+*.pdf
+repomix-output.md
+
+requirements-dev.txt
+requirements-frontend.txt
+
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
