@@ -92,6 +92,28 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./sessions.db"
 
+    @field_validator("database_url")
+    @classmethod
+    def _normalise_database_url(cls, value: str) -> str:
+        """Accept the URL shape hosting platforms actually hand out.
+
+        Render and Heroku both provide "postgres://...", a scheme
+        SQLAlchemy removed support for in 1.4. Rewriting it here means the
+        connection string can be pasted in unedited, and pins psycopg3 as
+        the driver rather than leaving SQLAlchemy to look for psycopg2,
+        which is not installed.
+        """
+
+        value = (value or "").strip()
+
+        if value.startswith("postgres://"):
+            return "postgresql+psycopg://" + value[len("postgres://") :]
+
+        if value.startswith("postgresql://"):
+            return "postgresql+psycopg://" + value[len("postgresql://") :]
+
+        return value
+
     upload_dir: Path = Path("uploads")
     vectorstore_dir: Path = Path("vectorstore")
     report_vectorstore_dir: Path = Path("report_vectorstore")
