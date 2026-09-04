@@ -1,0 +1,15 @@
+# Dependencies for the Streamlit frontend only.
+#
+# This file sits next to the entrypoint (main.py) so Streamlit Community
+# Cloud installs these rather than the repository-root requirements.txt,
+# which is the API service's dependency set - faiss, langchain, fastembed
+# and the rest. Installing that here is slow, unnecessary, and can exceed
+# the Community Cloud resource limit.
+#
+# If your Streamlit app is configured to use the root requirements.txt,
+# point it at this file instead (Manage app -> Settings).
+
+streamlit>=1.36,<2.0
+plotly>=5.22,<7.0
+pandas>=2.2,<4.0
+requests>=2.32,<3.0
