@@ -70,6 +70,10 @@ with chat_tab:
 
     if chat.get("suggestions") and not pending_prompt:
         st.caption("💡 You might also ask:")
+
+        # The wrapper class scopes the chip styling in styles.py to these
+        # buttons only.
+        st.markdown('<div class="suggestion-row">', unsafe_allow_html=True)
         columns = st.columns(len(chat["suggestions"]))
 
         for index, suggestion in enumerate(chat["suggestions"]):
@@ -80,12 +84,16 @@ with chat_tab:
                     st.session_state["pending_prompt"] = suggestion
                     st.rerun()
 
+        st.markdown("</div>", unsafe_allow_html=True)
+
     upload_nonce_key = f"uploader_nonce_{chat['id']}"
     upload_nonce = st.session_state.get(upload_nonce_key, 0)
 
     mic_nonce_key = f"mic_nonce_{chat['id']}"
     mic_nonce = st.session_state.get(mic_nonce_key, 0)
 
+    # Scopes the round icon-button styling to the attach/mic controls.
+    st.markdown('<div class="composer-row">', unsafe_allow_html=True)
     attach_column, mic_column, _ = st.columns([1, 1, 10])
 
     with attach_column, st.popover("📎"):
@@ -104,6 +112,8 @@ with chat_tab:
             key=f"mic_{chat['id']}_{mic_nonce}",
             label_visibility="collapsed",
         )
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------- upload
 
