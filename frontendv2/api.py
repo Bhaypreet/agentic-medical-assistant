@@ -6,6 +6,7 @@ errors are turned into a message the user can act on, and the credential
 travels on the X-API-Key header.
 """
 
+import contextlib
 import json
 import time
 
@@ -26,7 +27,24 @@ class ApiError(Exception):
     """A request failed in a way worth showing the user."""
 
 
+class AuthRequired(ApiError):
+    """The caller is not signed in, or the token is no longer valid."""
+
+
 def _headers() -> dict:
+    """Credentials for the backend.
+
+    A signed-in user's bearer token takes precedence; the machine key is
+    only a fallback for running the app as a service account.
+    """
+
+    import streamlit as st
+
+    token = st.session_state.get("auth_token")
+
+    if token:
+        return {"Authorization": f"Bearer {token}"}
+
     return {"X-API-Key": API_KEY} if API_KEY else {}
 
 
@@ -37,7 +55,7 @@ def _timeout(read: float = READ_TIMEOUT) -> tuple:
 def _handle(response: requests.Response):
 
     if response.status_code == 401:
-        raise ApiError("The assistant rejected this app's credentials. Check the API key.")
+        raise AuthRequired("Your session has expired. Please sign in again.")
 
     if response.status_code == 429:
         raise ApiError(
@@ -223,3 +241,56 @@ def transcribe_voice(audio_bytes: bytes) -> str:
         "/transcribe",
         files={"file": ("recording.wav", audio_bytes, "audio/wav")},
     ).json()["text"]
+
+
+# ----------------------------------------------------------------- auth
+
+
+def register(username: str, password: str, display_name: str = "") -> dict:
+    return _request(
+        "POST",
+        "/auth/register",
+        json={"username": username, "password": password, "display_name": display_name},
+    ).json()
+
+
+def login(username: str, password: str) -> dict:
+    """Exchange credentials for a bearer token.
+
+    A 401 here means the credentials were wrong, not that a session
+    expired, so it is reported as an ordinary ApiError.
+    """
+
+    try:
+        response = requests.post(
+            f"{FASTAPI_URL}/auth/login",
+            json={"username": username, "password": password},
+            timeout=_timeout(),
+        )
+    except requests.Timeout as exc:
+        raise ApiError("The assistant took too long to respond. Please try again.") from exc
+    except requests.ConnectionError as exc:
+        raise ApiError("Can't reach the assistant. Is the backend running?") from exc
+
+    if response.status_code == 401:
+        raise ApiError("Incorrect username or password.")
+
+    return _handle(response).json()
+
+
+def logout() -> None:
+    # The token is discarded locally regardless of the server's answer.
+    with contextlib.suppress(ApiError):
+        _request("POST", "/auth/logout")
+
+
+def whoami() -> dict:
+    return _request("GET", "/auth/me").json()
+
+
+def change_password(current_password: str, new_password: str) -> None:
+    _request(
+        "POST",
+        "/auth/change-password",
+        json={"current_password": current_password, "new_password": new_password},
+    )

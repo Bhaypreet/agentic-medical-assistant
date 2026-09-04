@@ -12,18 +12,57 @@ MINIMAL_PDF = b"%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>
 
 
 @pytest.fixture
-def client():
+def raw_client():
+    """A client with no credentials attached."""
     # raise_server_exceptions=False so the app's own 500 handler runs,
     # which is the behaviour under test.
     with TestClient(app, raise_server_exceptions=False) as test_client:
         yield test_client
 
 
+def _account(test_client):
+    """Register a fresh user and return its Authorization header."""
+
+    username = f"user{uuid.uuid4().hex[:10]}"
+    response = test_client.post(
+        "/auth/register",
+        json={"username": username, "password": "correct horse battery"},
+    )
+    assert response.status_code == 201, response.text
+
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
 @pytest.fixture
-def keyed(monkeypatch):
-    """Run with authentication switched on."""
-    monkeypatch.setattr(settings, "api_keys", "alice-key,bob-key")
-    return {"alice": {"X-API-Key": "alice-key"}, "bob": {"X-API-Key": "bob-key"}}
+def client(raw_client):
+    """A client already signed in as its own user.
+
+    Every data endpoint now requires an identity, so the default client
+    for these tests carries one.
+    """
+
+    raw_client.headers.update(_account(raw_client))
+    return raw_client
+
+
+@pytest.fixture
+def keyed(raw_client):
+    """Two separate accounts, for cross-tenant checks."""
+    return {"alice": _account(raw_client), "bob": _account(raw_client)}
+
+
+def _owner_for(test_client, headers):
+    """The owner string the backend derives from these credentials."""
+    from sqlalchemy import select
+
+    from app.auth.service import normalise_username
+    from app.session.db import SessionLocal, User
+
+    username = test_client.get("/auth/me", headers=headers or None).json()["username"]
+
+    with SessionLocal() as db:
+        user = db.scalar(select(User).where(User.username == normalise_username(username)))
+        return user.owner_key
 
 
 def _answer(text="Drink fluids and rest."):
@@ -54,21 +93,21 @@ def test_every_response_carries_a_correlation_id(client):
 # --------------------------------------------------------------- auth
 
 
-def test_requests_without_a_key_are_rejected_when_keys_are_configured(client, keyed):
-    response = client.post("/chat", json={"query": "hi", "session_id": str(uuid.uuid4())})
+def test_requests_without_credentials_are_rejected(raw_client):
+    response = raw_client.post("/chat", json={"query": "hi", "session_id": str(uuid.uuid4())})
     assert response.status_code == 401
 
 
-def test_requests_with_an_unknown_key_are_rejected(client, keyed):
-    response = client.post(
+def test_requests_with_an_unknown_token_are_rejected(raw_client):
+    response = raw_client.post(
         "/chat",
         json={"query": "hi", "session_id": str(uuid.uuid4())},
-        headers={"X-API-Key": "not-a-real-key"},
+        headers={"Authorization": "Bearer not-a-real-token"},
     )
     assert response.status_code == 401
 
 
-def test_a_valid_key_is_accepted(client, keyed):
+def test_a_valid_token_is_accepted(client, keyed):
     with (
         patch("app.api.routes.graph.invoke", return_value=_answer()),
         patch("app.api.routes.generate_suggestions", return_value=[]),
@@ -111,14 +150,16 @@ def test_one_caller_cannot_read_another_callers_chat(client, keyed):
 def test_one_caller_cannot_download_another_callers_report(client, keyed):
     session_id = str(uuid.uuid4())
 
-    from app.api.security import principal_for_key
     from app.session.session_manager import session_manager
+
+    # Give alice a report by writing it under the owner her token maps to.
+    owner = _owner_for(client, keyed["alice"])
 
     session_manager.save_report_data(
         session_id,
         [{"report_type": "CBC", "parameters": {}}],
         "Summary",
-        owner=principal_for_key("alice-key"),
+        owner=owner,
     )
 
     assert (
@@ -252,7 +293,7 @@ def test_deleting_a_session_also_removes_its_vector_store(client):
     session_id = str(uuid.uuid4())
     report_id = str(uuid.uuid4())
 
-    session_manager.save_report(session_id, report_id)
+    session_manager.save_report(session_id, report_id, owner=_owner_for(client, {}))
 
     with patch("app.api.routes.delete_report_store") as delete_store:
         assert client.delete(f"/sessions/{session_id}").status_code == 204

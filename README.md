@@ -15,6 +15,7 @@ supervisor routes each message to the agent that should handle it.
 
 | Capability | How it works |
 |---|---|
+| **Accounts** | Username and password sign-in; scrypt-hashed passwords, revocable bearer tokens, per-user data isolation |
 | **Report analysis** | PDF text extraction or OCR → per-page model extraction → reference-range interpretation → physician-style summary |
 | **Symptom triage** | One clarifying question, then a 1–5 severity assessment; severity 4–5 leads with emergency instructions |
 | **Report chat** | Questions about an uploaded report, answered from the structured values plus a per-report vector index |
@@ -114,8 +115,10 @@ list; these are the ones that matter most:
 | Variable | Default | Notes |
 |---|---|---|
 | `GROQ_API_KEY` | — | **Required.** Startup aborts without it. |
+| `SECRET_KEY` | — | **Required in production**, min 32 chars. Pepper for password hashes and tokens. |
 | `ENVIRONMENT` | `development` | `production` enforces the rules below. |
-| `API_KEYS` | *(empty)* | Comma-separated keys for `X-API-Key`. **Required in production.** |
+| `API_KEYS` | *(empty)* | Optional machine keys for `X-API-Key`. People use accounts instead. |
+| `ALLOW_REGISTRATION` | `true` | Set `false` to close sign-ups after creating your accounts. |
 | `DATABASE_URL` | `sqlite:///./sessions.db` | Point at Postgres for any real deploy. |
 | `ALLOWED_ORIGINS` | localhost:8501 | CORS allowlist. |
 | `MAX_UPLOAD_BYTES` | 15 MB | Enforced while streaming to disk. |
@@ -124,19 +127,25 @@ list; these are the ones that matter most:
 | `DEBUG_LOG_REPORT_CONTENT` | `false` | Logs patient data. Refused in production. |
 
 Two settings are enforced by validators rather than documentation:
-`ENVIRONMENT=production` will not start without `API_KEYS`, and will not start
-with `DEBUG_LOG_REPORT_CONTENT=true`.
+`ENVIRONMENT=production` will not start without a 32-character `SECRET_KEY`,
+and will not start with `DEBUG_LOG_REPORT_CONTENT=true`.
 
 ---
 
 ## API
 
-All endpoints require `X-API-Key` when `API_KEYS` is set. A `session_id` is a
-conversation key within the caller's own namespace — it never grants access to
-another caller's data.
+**Every data endpoint requires a credential** — a bearer token from signing in,
+or an `X-API-Key` for service callers. There is no anonymous access in any
+environment. A `session_id` is a conversation key inside the caller's own
+namespace; it never grants access to another account's data.
 
 | Method | Path | Purpose |
 |---|---|---|
+| `POST` | `/auth/register` | Create an account, returns a token. |
+| `POST` | `/auth/login` | Exchange username and password for a token. |
+| `POST` | `/auth/logout` | Revoke the presented token. |
+| `GET` | `/auth/me` | The signed-in account. |
+| `POST` | `/auth/change-password` | Change password; revokes all other sessions. |
 | `GET` | `/health` | Liveness. |
 | `GET` | `/ready` | Readiness: database, credentials, knowledge base. 503 when unable to serve. |
 | `POST` | `/chat` | One turn. Returns the answer and follow-up suggestions. |
@@ -158,8 +167,12 @@ client polls `/report-status`.
 
 Uploaded reports are personal health information. What the service does:
 
-- **Scopes every read to the caller.** Session data is namespaced by the
-  principal derived from the API key; a session id alone reads nothing.
+- **Scopes every read to the account.** Session data is namespaced by the
+  signed-in user; a session id alone reads nothing, and two people using the
+  same deployment cannot see each other's reports.
+- **Never stores a password.** Passwords are scrypt hashes with a per-user salt
+  and a server-side pepper. Sign-in tokens are stored only as hashes, and are
+  revocable — logging out or changing a password invalidates them immediately.
 - **Never trusts an uploaded filename.** Files are written to
   server-generated UUID paths, with type, magic bytes and size checked.
 - **Deletes the source file** once processing finishes, and sweeps uploads,
@@ -174,7 +187,8 @@ What it does **not** do, and what you must add before handling real patients:
 
 - No encryption at rest for uploads or vector indexes.
 - No audit log of who read which record.
-- No per-user accounts — an API key identifies an application, not a person.
+- No email verification, password reset, or multi-factor authentication.
+- No role separation — every account has the same access to its own data.
 - No formal HIPAA/GDPR assessment, data-processing agreement, or retention policy
   beyond the sweep above.
 
@@ -183,13 +197,24 @@ What it does **not** do, and what you must add before handling real patients:
 ## Development
 
 ```bash
-pytest                      # 146 tests
+pytest                      # 182 tests
 pytest --cov=app            # with coverage
 ruff check . && ruff format --check .
 ```
 
 CI runs the linter, the tests with a coverage floor, and a Docker build on
 every pull request.
+
+### Deploying
+
+The API needs `GROQ_API_KEY` and, in production, `SECRET_KEY`. Point
+`DATABASE_URL` at Postgres unless losing accounts on every restart is
+acceptable — most hosts give containers an ephemeral filesystem.
+
+The Streamlit frontend is deployed separately. Set `FASTAPI_URL` in its secrets
+to the API's public URL, and make sure its dependency file is
+`frontendv2/requirements.txt` rather than the repository-root one, which is the
+API's much heavier dependency set.
 
 The test suite mocks every network call, so it needs neither a Groq key nor the
 vector store. `tests/conftest.py` supplies dummy settings and an in-memory

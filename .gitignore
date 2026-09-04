@@ -18,3 +18,5 @@ testpdf*.pdf
 
 .coverage
 htmlcov/
+
+scratch_*.db*

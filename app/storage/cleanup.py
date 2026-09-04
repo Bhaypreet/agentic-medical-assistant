@@ -75,21 +75,29 @@ def purge_expired(retention_hours: int | None = None) -> dict[str, int]:
                 removed_stores += 1
 
     # Finished job rows hold the report result, which is patient data.
+    from app.auth.service import purge_expired_tokens
     from app.jobs.report_jobs import purge_old_jobs
 
     removed_jobs = purge_old_jobs(hours)
+    removed_tokens = purge_expired_tokens()
 
-    if removed_uploads or removed_stores or removed_jobs:
+    if removed_uploads or removed_stores or removed_jobs or removed_tokens:
         logger.info(
             "Retention sweep complete",
             extra={
                 "uploads_removed": removed_uploads,
                 "stores_removed": removed_stores,
                 "jobs_removed": removed_jobs,
+                "tokens_removed": removed_tokens,
             },
         )
 
-    return {"uploads": removed_uploads, "stores": removed_stores, "jobs": removed_jobs}
+    return {
+        "uploads": removed_uploads,
+        "stores": removed_stores,
+        "jobs": removed_jobs,
+        "tokens": removed_tokens,
+    }
 
 
 def start_retention_worker(interval_seconds: int = 3600):
