@@ -1,73 +1,86 @@
-import os
-from dotenv import load_dotenv
+"""Build the medical knowledge-base vector store.
 
-from langchain_community.document_loaders import TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import FastEmbedEmbeddings
-from langchain_community.vectorstores import FAISS
+Run as a script:  python -m app.rag.ingest
 
-# Load environment variables
-load_dotenv()
+This used to execute its entire body at import time, so merely importing
+the module rebuilt the index.
+"""
 
-DATA_DIR = "data"
-VECTORSTORE_DIR = "vectorstore"
+import argparse
+import sys
 
-# -----------------------------
-# Load Documents
-# -----------------------------
-documents = []
+from app.config import settings
+from app.logging_config import configure_logging, get_logger
 
-for file in os.listdir(DATA_DIR):
-    if file.endswith(".txt"):
-        path = os.path.join(DATA_DIR, file)
+logger = get_logger(__name__)
 
-        loader = TextLoader(path, encoding="utf-8")
-        docs = loader.load()
 
-        documents.extend(docs)
+def build_vectorstore(rebuild: bool = False) -> int:
+    """Ingest data/*.txt into a FAISS index. Returns the chunk count."""
 
-        print(f"Loaded: {file}")
+    from langchain_community.document_loaders import TextLoader
+    from langchain_community.vectorstores import FAISS
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-print(f"\nTotal documents loaded: {len(documents)}")
+    from app.rag.retriever import get_embedding_model
 
-# -----------------------------
-# Split Documents into Chunks
-# -----------------------------
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=500,
-    chunk_overlap=50
-)
+    if settings.vectorstore_dir.exists() and not rebuild:
+        logger.info(
+            "Vector store already exists; pass --rebuild to recreate it",
+            extra={"path": str(settings.vectorstore_dir)},
+        )
+        return 0
 
-chunks = text_splitter.split_documents(documents)
+    source_files = sorted(settings.data_dir.glob("*.txt"))
 
-print(f"\nTotal chunks created: {len(chunks)}")
+    if not source_files:
+        raise SystemExit(f"No .txt source files found in {settings.data_dir}/")
 
-# -----------------------------
-# Create Embeddings
-# -----------------------------
-print("\nLoading embedding model...")
+    documents = []
 
-embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+    for path in source_files:
+        documents.extend(TextLoader(str(path), encoding="utf-8").load())
+        logger.info("Loaded source document", extra={"file": path.name})
 
-# -----------------------------
-# Create FAISS Vector Store
-# -----------------------------
-print("\nCreating FAISS vector database...")
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=settings.chunk_size,
+        chunk_overlap=settings.chunk_overlap,
+    )
 
-vectorstore = FAISS.from_documents(
-    documents=chunks,
-    embedding=embeddings
-)
+    chunks = splitter.split_documents(documents)
 
-# -----------------------------
-# Save Vector Store
-# -----------------------------
-vectorstore.save_local(VECTORSTORE_DIR)
+    logger.info(
+        "Split documents into chunks",
+        extra={"documents": len(documents), "chunks": len(chunks)},
+    )
 
-print(f"\nVector database saved to '{VECTORSTORE_DIR}'")
+    store = FAISS.from_documents(documents=chunks, embedding=get_embedding_model())
+    store.save_local(str(settings.vectorstore_dir))
 
-# -----------------------------
-# Preview
-# -----------------------------
-print("\nFirst Chunk Preview:\n")
-print(chunks[0].page_content[:500])
+    logger.info(
+        "Vector store written",
+        extra={"path": str(settings.vectorstore_dir), "chunks": len(chunks)},
+    )
+
+    return len(chunks)
+
+
+def main(argv: list[str] | None = None) -> int:
+
+    parser = argparse.ArgumentParser(description="Build the medical knowledge base.")
+    parser.add_argument(
+        "--rebuild",
+        action="store_true",
+        help="Recreate the index even if one already exists.",
+    )
+
+    args = parser.parse_args(argv)
+
+    configure_logging()
+    build_vectorstore(rebuild=args.rebuild)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,27 +1,60 @@
-from pydantic import BaseModel
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
 
 
 class ChatRequest(BaseModel):
-    query: str
-    session_id: str
-    location: str = ""
+    query: str = Field(min_length=1, max_length=4000)
+    session_id: str = Field(min_length=1, max_length=64)
+    location: str = Field(default="", max_length=200)
 
 
 class ChatResponse(BaseModel):
     response: str
-
-
-class SymptomRequest(BaseModel):
-    query: str
-    location: str
+    suggestions: list[str] = Field(default_factory=list)
     session_id: str
 
 
-class UploadResponse(BaseModel):
-    report_id: str
-    message: str
+class MessageOut(BaseModel):
+    role: str
+    content: str
 
 
-class ReportChatRequest(BaseModel):
+class HistoryResponse(BaseModel):
     session_id: str
-    question: str
+    messages: list[MessageOut]
+
+
+class SessionSummary(BaseModel):
+    id: str
+    chat_name: str
+    has_report: bool
+    updated_at: str | None = None
+
+
+class UploadAccepted(BaseModel):
+    job_id: str
+    session_id: str
+    status: str
+
+
+class JobStatus(BaseModel):
+    job_id: str
+    session_id: str
+    status: Literal["pending", "running", "succeeded", "failed"]
+    filename: str = ""
+    result: dict[str, Any] | None = None
+    error: str | None = None
+
+
+class TranscriptionResponse(BaseModel):
+    text: str
+
+
+class HealthResponse(BaseModel):
+    status: str
+
+
+class ReadinessResponse(BaseModel):
+    status: str
+    checks: dict[str, str]

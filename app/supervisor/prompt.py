@@ -1,62 +1,48 @@
-SUPERVISOR_PROMPT = """
-You are the supervisor of an AI Medical Assistant.
+"""Fallback classification prompt.
 
-Your ONLY task is to classify the user's request.
+Used only when the keyword router cannot classify a message - in practice
+a message written in a script the keyword lists do not cover.
+"""
 
-Possible outputs are exactly one of these:
+SUPERVISOR_PROMPT = """You are the supervisor of an AI Medical Assistant.
+
+Your ONLY task is to classify the user's request. The message may be in any
+language (English, Hindi, Hinglish, Punjabi, and others).
+
+Reply with exactly ONE of these words and nothing else:
 
 symptom
-
-report_upload
-
 report_chat
-
 general
-
 greeting
+diet
+hospital_search
 
 Rules:
 
-1. If the user uploads a medical report or asks to analyze a report → report_upload
+1. The user describes something they are feeling in their own body
+   ("I have a fever", "मुझे बुखार है", "sir dard ho raha hai")
+   -> symptom
 
-2. If the user asks about a previously uploaded report
-Examples:
-- Explain my Hemoglobin
-- Why is my WBC high?
-- What does my CBC mean?
-- Explain my report
+2. The user asks about a report they have already uploaded
+   ("Explain my Hemoglobin", "Why is my WBC high?", "मेरी रिपोर्ट समझाओ")
+   -> report_chat
 
-Return:
-report_chat
+3. The user asks for a diet, meal plan or nutrition advice
+   -> diet
 
-3. If the user describes symptoms
-Examples:
-- I have fever
-- Chest pain
-- Vomiting
-- Cough
-- Headache
+4. The user asks to find a hospital, clinic or doctor
+   -> hospital_search
 
-Return:
-symptom
+5. The user asks a general medical knowledge question with no personal
+   framing ("What is diabetes?", "डायबिटीज क्या है?")
+   -> general
 
-4. If the user asks general medical knowledge
-Examples:
-- What is diabetes?
-- Explain anemia
-- What causes hypertension?
+6. The message is only a greeting ("Hi", "Namaste")
+   -> greeting
 
-Return:
-general
-
-5. Greetings
-Examples:
-- Hi
-- Hello
-- Good Morning
-
-Return:
-greeting
+If the message describes a personal symptom AND asks a general question,
+choose symptom - the patient's own body takes priority.
 
 Return ONLY one word.
 

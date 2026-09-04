@@ -1,99 +1,123 @@
-import json
-import os
+"""Local, per-browser chat state.
+
+Chats used to be written to one server-side folder that every visitor
+read, so on a deployed instance anyone could see everyone else's chats,
+uploaded report names and health summaries - no attack required.
+
+Nothing about a conversation is persisted on the frontend now. Chat ids
+live in st.session_state, which is per browser session, and the messages
+themselves come from the backend, which scopes them to the credential.
+"""
+
+import contextlib
 import uuid
 
-SESSION_FOLDER = "frontendv2/sessions"
+import streamlit as st
 
-os.makedirs(
-    SESSION_FOLDER,
-    exist_ok=True
-)
+import api
+
+DEFAULT_CHAT_NAME = "New Chat"
 
 
-def create_chat():
+def _local() -> dict:
+    """Per-browser view state, keyed by chat id."""
+
+    if "chat_state" not in st.session_state:
+        st.session_state.chat_state = {}
+
+    return st.session_state.chat_state
+
+
+def create_chat() -> dict:
 
     chat = {
         "id": str(uuid.uuid4()),
-        "chat_name": "New Chat",
-        "messages": [],
+        "chat_name": DEFAULT_CHAT_NAME,
         "report": None,
-        "report_id": None,
         "summary": "",
-        "uploaded_file": ""
+        "suggestions": [],
+        "uploaded_file": "",
     }
 
-    save_chat(chat)
+    _local()[chat["id"]] = chat
 
     return chat
 
 
-def save_chat(chat):
+def save_chat(chat: dict) -> None:
+    """Keep view state for this browser session. Messages are not stored
+    here - the backend is the single source of truth for those."""
 
-    path = os.path.join(
-        SESSION_FOLDER,
-        f"{chat['id']}.json"
-    )
+    _local()[chat["id"]] = chat
 
-    with open(path, "w", encoding="utf-8") as f:
 
-        json.dump(
-            chat,
-            f,
-            indent=4,
-            ensure_ascii=False
+def get_chat(chat_id: str) -> dict | None:
+    return _local().get(chat_id)
+
+
+def load_messages(chat_id: str) -> list[dict]:
+    """The conversation, from the server."""
+
+    try:
+        return api.get_history(chat_id)
+    except api.ApiError:
+        return []
+
+
+@st.cache_data(ttl=10, show_spinner=False)
+def _fetch_sessions() -> list[dict]:
+    """Cached so the sidebar does not re-fetch on every widget interaction.
+
+    The previous implementation read and parsed every chat file from disk
+    on every Streamlit rerun, which happens on each interaction.
+    """
+
+    try:
+        return api.list_sessions()
+    except api.ApiError:
+        return []
+
+
+def load_all_chats() -> list[dict]:
+    """Chat summaries for this credential, most recently updated first."""
+
+    remote = _fetch_sessions()
+    local = _local()
+
+    merged = []
+
+    for summary in remote:
+        cached = local.get(summary["id"], {})
+        merged.append(
+            {
+                "id": summary["id"],
+                "chat_name": summary.get("chat_name") or DEFAULT_CHAT_NAME,
+                "has_report": summary.get("has_report", False),
+                "updated_at": summary.get("updated_at"),
+                "report": cached.get("report"),
+                "summary": cached.get("summary", ""),
+                "suggestions": cached.get("suggestions", []),
+                "uploaded_file": cached.get("uploaded_file", ""),
+            }
         )
 
+    seen = {item["id"] for item in merged}
 
-def load_chat(chat_id):
+    # Chats created in this browser that have no messages yet are not
+    # known to the server, so they would otherwise disappear.
+    merged.extend(chat for chat_id, chat in local.items() if chat_id not in seen)
 
-    path = os.path.join(
-        SESSION_FOLDER,
-        f"{chat_id}.json"
-    )
-
-    if not os.path.exists(path):
-        return None
-
-    with open(path, "r", encoding="utf-8") as f:
-
-        return json.load(f)
+    return merged
 
 
-def load_all_chats():
-
-    chats = []
-
-    for file in os.listdir(SESSION_FOLDER):
-
-        if file.endswith(".json"):
-
-            with open(
-                os.path.join(
-                    SESSION_FOLDER,
-                    file
-                ),
-                "r",
-                encoding="utf-8"
-            ) as f:
-
-                chats.append(
-                    json.load(f)
-                )
-
-    chats.sort(
-        key=lambda x: x["chat_name"]
-    )
-
-    return chats
+def refresh_sessions() -> None:
+    _fetch_sessions.clear()
 
 
-def delete_chat(chat_id):
+def delete_chat(chat_id: str) -> None:
 
-    path = os.path.join(
-        SESSION_FOLDER,
-        f"{chat_id}.json"
-    )
+    with contextlib.suppress(api.ApiError):
+        api.delete_session(chat_id)
 
-    if os.path.exists(path):
-
-        os.remove(path)
+    _local().pop(chat_id, None)
+    refresh_sessions()

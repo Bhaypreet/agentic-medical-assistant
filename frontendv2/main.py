@@ -1,53 +1,27 @@
-import os
-import tempfile
-
 import streamlit as st
 
+import api
+from components.chat import render_messages
+from components.dashboards import render_dashboard
+from components.health_summary import show_summary
+from components.report import show_report
+from components.sidebars import render_sidebar
+from config import API_KEY, FASTAPI_URL
 from styles import CSS
-
-from api import (
-    chat as chat_api,
-    upload_report,
-    transcribe_voice,
-    download_report_pdf
-)
-
-from utils.storage import (
-    save_chat,
-    load_all_chats,
-    create_chat
-)
-
-from conponents.sidebars import render_sidebar
-from conponents.chat import (
-    render_messages,
-    add_message
-)
-from conponents.report import show_report
-from conponents.health_summary import show_summary
-from conponents.streaming import stream_text
-from conponents.dashboards import render_dashboard
-
+from utils.storage import create_chat, load_all_chats, load_messages, refresh_sessions, save_chat
 
 st.set_page_config(
     page_title="Agentic Medical Assistant",
     page_icon="🩺",
-    layout="wide"
+    layout="wide",
 )
 
 st.markdown(CSS, unsafe_allow_html=True)
 
 
 if "current_chat" not in st.session_state:
-
     chats = load_all_chats()
-
-    if len(chats) == 0:
-        chat = create_chat()
-        st.session_state.current_chat = chat
-    else:
-        st.session_state.current_chat = chats[0]
-
+    st.session_state.current_chat = chats[0] if chats else create_chat()
 
 chat = st.session_state.current_chat
 
@@ -60,10 +34,18 @@ st.markdown(
         <p>AI-powered report analysis, symptom triage, and nearby-hospital finder</p>
     </div>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
-st.subheader(chat["chat_name"])
+if not API_KEY:
+    st.info(
+        f"No API key is configured, so this app is talking to `{FASTAPI_URL}` "
+        "unauthenticated. Set `MEDICAL_ASSISTANT_API_KEY` before deploying — "
+        "without it, anyone reaching the backend can read the chats it stores.",
+        icon="🔑",
+    )
+
+st.subheader(chat.get("chat_name", "New Chat"))
 
 chat_tab, dashboard_tab = st.tabs(["💬 Chat", "📊 Health Dashboard"])
 
@@ -71,35 +53,39 @@ with dashboard_tab:
     render_dashboard(chat)
 
 with chat_tab:
-
     if chat.get("summary"):
         show_summary(chat)
 
-        if st.button("⬇️ Download Full Report (PDF)"):
-            with st.spinner("Preparing PDF..."):
-                pdf_bytes = download_report_pdf(chat["id"])
-            st.download_button(
-                "📄 Save PDF",
-                data=pdf_bytes,
-                file_name="health_report.pdf",
-                mime="application/pdf"
-            )
+        if st.button("⬇️ Download full report (PDF)"):
+            try:
+                with st.spinner("Preparing PDF…"):
+                    pdf_bytes = api.download_report_pdf(chat["id"])
+            except api.ApiError as error:
+                st.error(str(error))
+            else:
+                st.download_button(
+                    "📄 Save PDF",
+                    data=pdf_bytes,
+                    file_name="health_report.pdf",
+                    mime="application/pdf",
+                )
 
     if chat.get("report"):
         show_report(chat["report"])
 
-    render_messages(chat)
+    render_messages(load_messages(chat["id"]))
 
     pending_prompt = st.session_state.pop("pending_prompt", None)
 
     if chat.get("suggestions") and not pending_prompt:
-
         st.caption("💡 You might also ask:")
-        cols = st.columns(len(chat["suggestions"]))
+        columns = st.columns(len(chat["suggestions"]))
 
-        for i, suggestion in enumerate(chat["suggestions"]):
-            with cols[i]:
-                if st.button(suggestion, key=f"sugg_{chat['id']}_{i}", use_container_width=True):
+        for index, suggestion in enumerate(chat["suggestions"]):
+            with columns[index]:
+                if st.button(
+                    suggestion, key=f"sugg_{chat['id']}_{index}", use_container_width=True
+                ):
                     st.session_state["pending_prompt"] = suggestion
                     st.rerun()
 
@@ -109,113 +95,123 @@ with chat_tab:
     mic_nonce_key = f"mic_nonce_{chat['id']}"
     mic_nonce = st.session_state.get(mic_nonce_key, 0)
 
-    attach_col, mic_col, _ = st.columns([1, 1, 10])
+    attach_column, mic_column, _ = st.columns([1, 1, 10])
 
-    with attach_col:
-        st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
-        with st.popover("📎"):
-            st.caption("Upload a lab report (PDF or photo)")
-            uploaded_file = st.file_uploader(
-                "Upload",
-                type=["pdf", "png", "jpg", "jpeg"],
-                key=f"uploader_{chat['id']}_{upload_nonce}",
-                label_visibility="collapsed"
-            )
-        st.markdown('</div>', unsafe_allow_html=True)
+    with attach_column, st.popover("📎"):
+        st.caption("Upload a lab report (PDF or photo, max 15 MB)")
+        uploaded_file = st.file_uploader(
+            "Upload",
+            type=["pdf", "png", "jpg", "jpeg"],
+            key=f"uploader_{chat['id']}_{upload_nonce}",
+            label_visibility="collapsed",
+        )
 
-    with mic_col:
-        st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
-        with st.popover("🎙️"):
-            st.caption("Record your question, then close this popover")
-            audio_value = st.audio_input(
-                "Record",
-                key=f"mic_{chat['id']}_{mic_nonce}",
-                label_visibility="collapsed"
-            )
-        st.markdown('</div>', unsafe_allow_html=True)
+    with mic_column, st.popover("🎙️"):
+        st.caption("Record your question, then close this popover")
+        audio_value = st.audio_input(
+            "Record",
+            key=f"mic_{chat['id']}_{mic_nonce}",
+            label_visibility="collapsed",
+        )
 
-    if uploaded_file is not None and chat.get("uploaded_file") != uploaded_file.name:
+    # ---------------------------------------------------------- upload
 
-        suffix = "." + uploaded_file.name.split(".")[-1].lower()
+    if uploaded_file is not None:
+        status = st.status(f"Analysing {uploaded_file.name}…", expanded=True)
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(uploaded_file.read())
-            temp_path = tmp.name
+        try:
+            with status:
+                st.write("Uploading…")
 
-        with st.spinner("Analyzing Medical Report..."):
-            result = upload_report(temp_path, chat["id"])
+                job = api.upload_report(
+                    file_bytes=uploaded_file.getvalue(),
+                    filename=uploaded_file.name,
+                    session_id=chat["id"],
+                )
 
-        os.remove(temp_path)
+                st.write("Reading the report — this can take a minute for a long PDF.")
 
-        summary_text = result.get("summary", "")
+                result = api.wait_for_report(job["job_id"])
 
-        chat["report"] = result
-        chat["summary"] = summary_text
-        chat["chat_name"] = uploaded_file.name
-        chat["uploaded_file"] = uploaded_file.name
+        except api.ApiError as error:
+            status.update(label="Upload failed", state="error")
+            st.error(str(error))
 
-        # also add it as a normal chat message, so it appears in the
-        # conversation thread itself - not just as a floating info box
-        if summary_text:
-            add_message(
-                chat,
-                "assistant",
-                f"📋 I've analyzed your report. Here's what I found:\n\n{summary_text}"
-            )
+        else:
+            status.update(label="Report analysed", state="complete")
 
-        save_chat(chat)
-        st.session_state.current_chat = chat
+            chat["report"] = result
+            chat["summary"] = result.get("summary", "")
+            chat["chat_name"] = uploaded_file.name
+            chat["uploaded_file"] = uploaded_file.name
 
-        st.session_state[upload_nonce_key] = upload_nonce + 1
+            for warning in (result.get("outcome") or {}).get("warnings", []):
+                st.warning(warning)
 
-        st.success("✅ Report Uploaded Successfully")
-        st.rerun()
+            save_chat(chat)
+            refresh_sessions()
+
+            st.session_state.current_chat = chat
+            st.session_state[upload_nonce_key] = upload_nonce + 1
+
+            st.rerun()
+
+    # ----------------------------------------------------------- voice
 
     voice_prompt = None
 
     if audio_value is not None:
-
-        with st.spinner("Transcribing..."):
+        with st.spinner("Transcribing…"):
             try:
-                voice_prompt = transcribe_voice(audio_value.read())
-            except Exception as e:
-                st.error(f"Could not transcribe audio: {e}")
+                voice_prompt = api.transcribe_voice(audio_value.read())
+            except api.ApiError as error:
+                st.error(str(error))
 
         st.session_state[mic_nonce_key] = mic_nonce + 1
 
-    typed_prompt = st.chat_input("Ask your medical question...")
+    # ------------------------------------------------------------ chat
+
+    typed_prompt = st.chat_input("Ask your medical question…")
 
     prompt = pending_prompt or voice_prompt or typed_prompt
 
     if prompt:
-
-        add_message(chat, "user", prompt)
-        save_chat(chat)
-
         with st.chat_message("user"):
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
+            placeholder = st.empty()
+            placeholder.markdown("_Thinking…_")
 
-            with st.spinner("Thinking..."):
-                try:
-                    response = chat_api(prompt, chat["id"])
-                    answer = response.get("response", "Sorry, I couldn't generate a response.")
-                    new_suggestions = response.get("suggestions", [])
-                except Exception as e:
-                    answer = f"❌ Error: {str(e)}"
-                    new_suggestions = []
+            answer = ""
+            suggestions = []
 
-                streamed_text = stream_text(answer)
+            try:
+                for event, payload in api.chat_stream(prompt, chat["id"]):
+                    if event == "progress":
+                        placeholder.markdown(f"_{payload.get('label', 'Working…')}_")
+                    elif event == "message":
+                        answer = payload.get("response", "")
+                        placeholder.markdown(answer)
+                    elif event == "suggestions":
+                        suggestions = payload.get("suggestions", [])
+                    elif event == "error":
+                        raise api.ApiError(payload.get("detail", "Something went wrong."))
 
-        add_message(chat, "assistant", streamed_text)
-        chat["suggestions"] = new_suggestions
+            except api.ApiError as error:
+                answer = ""
+                placeholder.error(str(error))
 
-        save_chat(chat)
-        st.session_state.current_chat = chat
+            if answer:
+                placeholder.markdown(answer)
 
-        st.rerun()
+        if answer:
+            chat["suggestions"] = suggestions
+            save_chat(chat)
+            refresh_sessions()
+            st.session_state.current_chat = chat
+            st.rerun()
 
 
 st.divider()
-st.caption("🩺 Agentic Medical Assistant | LangGraph + FastAPI + Groq + Whisper")
+st.caption("🩺 Agentic Medical Assistant — informational only, not a medical diagnosis.")
