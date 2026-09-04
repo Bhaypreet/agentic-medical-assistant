@@ -30,7 +30,12 @@ COPY pyproject.toml .
 
 # Build the knowledge base at image build time so the running container
 # does not need write access to do it, and startup is not delayed.
-RUN python -m app.rag.ingest
+#
+# Settings are validated at import and GROQ_API_KEY is required, but this
+# step only runs the local embedding model - it never calls Groq. The
+# placeholder is scoped to this one RUN so it is not baked into the image
+# as an ENV layer; the real key is still required at runtime.
+RUN GROQ_API_KEY=unused-at-build-time python -m app.rag.ingest
 
 # The service ran as root. Give it an unprivileged user that owns only
 # the directories it must write to.
