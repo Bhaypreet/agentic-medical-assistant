@@ -1,0 +1,17 @@
+# Streamlit theme.
+#
+# Only the brand colour and font are pinned. `base` is deliberately left
+# unset so the app follows the viewer's light/dark preference instead of
+# forcing one - the previous stylesheet hardcoded light surfaces, which
+# rendered dark grey text on a dark background for anyone using dark mode.
+
+[theme]
+primaryColor = "#0d9488"
+font = "sans serif"
+
+[client]
+showErrorDetails = false
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
