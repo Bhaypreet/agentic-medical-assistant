@@ -46,20 +46,31 @@ def principal_for_key(api_key: str) -> str:
     return f"key:{digest[:32]}"
 
 
-def _machine_principal(x_api_key: str | None) -> Principal | None:
+def is_known_api_key(x_api_key: str | None) -> bool:
+    """Whether this is one of the configured machine keys.
+
+    Every candidate is compared so a timing difference cannot be used to
+    recover a key byte by byte.
+    """
+
     allowed = settings.allowed_api_keys
 
     if not x_api_key or not allowed:
-        return None
+        return False
 
-    # Every candidate is compared so a timing difference cannot be used
-    # to recover a key byte by byte.
     matched = False
     for candidate in allowed:
         if hmac.compare_digest(x_api_key, candidate):
             matched = True
 
-    if not matched:
+    return matched
+
+
+def _machine_principal(x_api_key: str | None) -> Principal | None:
+    if not x_api_key or not settings.allowed_api_keys:
+        return None
+
+    if not is_known_api_key(x_api_key):
         logger.warning("Rejected request with an unrecognised API key")
         return None
 

@@ -1,0 +1,92 @@
+# Render blueprint: the API, the Streamlit frontend and a Postgres
+# instance, wired to each other.
+#
+#   Render dashboard -> New -> Blueprint -> pick this repository.
+#
+# Only GROQ_API_KEY has to be typed in; everything else is either
+# generated or resolved between the services. See "Deploying" in
+# README.md for what to check afterwards.
+
+databases:
+  - name: medassist-db
+    databaseName: medassist
+    user: medassist
+    plan: free
+
+services:
+  # ------------------------------------------------------------- API
+  - type: web
+    name: medassist-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      # Refuses to start without a 32-character SECRET_KEY, and refuses
+      # to log patient content. See app/config.py.
+      - key: ENVIRONMENT
+        value: production
+
+      # The one value that cannot be generated or derived.
+      - key: GROQ_API_KEY
+        sync: false
+
+      # Pepper for every stored password hash and token. Rotating it
+      # invalidates all passwords and sessions, so let Render generate it
+      # once and leave it alone.
+      - key: SECRET_KEY
+        generateValue: true
+
+      # Shared with the frontend below, which uses it to identify itself
+      # and to pass each visitor's address through in X-Client-Address.
+      # Without it the API meters every visitor as one caller.
+      - key: API_KEYS
+        generateValue: true
+
+      # Accounts and chat history. The container filesystem is ephemeral,
+      # so the SQLite default would reset on every deploy.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: medassist-db
+          property: connectionString
+
+      # Render terminates TLS and forwards, so exactly one proxy sits in
+      # front of this service. Without it every request looks like it
+      # came from the load balancer and shares one rate-limit bucket.
+      - key: TRUSTED_PROXY_HOPS
+        value: "1"
+
+      - key: WEB_CONCURRENCY
+        value: "2"
+
+  # -------------------------------------------------------- frontend
+  - type: web
+    name: medassist-frontend
+    runtime: python
+    plan: starter
+    healthCheckPath: /_stcore/health
+    buildCommand: pip install -r requirements-frontend.txt
+    startCommand: >-
+      streamlit run frontendv2/main.py
+      --server.port $PORT
+      --server.address 0.0.0.0
+      --server.headless true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+
+      # Resolves to the API's hostname; frontendv2/config.py adds the
+      # scheme.
+      - key: FASTAPI_URL
+        fromService:
+          type: web
+          name: medassist-api
+          property: host
+
+      # The same generated value as the API's API_KEYS, so this frontend
+      # is a recognised service caller.
+      - key: MEDICAL_ASSISTANT_API_KEY
+        fromService:
+          type: web
+          name: medassist-api
+          envVarKey: API_KEYS

@@ -1,0 +1,19 @@
+# The repository is edited on Windows and built on Linux. Git stores LF
+# either way, but a CRLF working copy can still reach the image through a
+# bind mount or a local `docker build`, and `sh` treats the trailing \r as
+# part of the command. Pin the files where that would break a deploy.
+
+* text=auto eol=lf
+
+Dockerfile      text eol=lf
+*.sh            text eol=lf
+*.yaml          text eol=lf
+*.yml           text eol=lf
+*.py            text eol=lf
+
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.pdf           binary
+*.faiss         binary
+*.pkl           binary

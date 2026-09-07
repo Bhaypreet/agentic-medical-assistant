@@ -64,6 +64,12 @@ jobs:
             "pytest-cov>=5.0,<8.0" \
             "httpx>=0.27,<1.0"
 
+      # The frontend's own tests import it, so it is installed here too;
+      # without it those tests skip and the API-side coverage gate is the
+      # only thing left checking the client.
+      - name: Install frontend dependencies
+        run: pip install -r requirements-frontend.txt
+
       - name: Run tests
         run: pytest --cov=app --cov-report=term-missing --cov-fail-under=55
 

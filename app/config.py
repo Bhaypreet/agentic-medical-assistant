@@ -88,6 +88,20 @@ class Settings(BaseSettings):
     upload_rate_limit: str = "5/minute"
     transcribe_rate_limit: str = "10/minute"
 
+    # How many reverse proxies sit in front of this service. Each appends
+    # one entry to X-Forwarded-For, so this says how far from the right
+    # the real caller is; see app.api.rate_limit.client_address. Leave at
+    # 0 when nothing proxies the service - reading the header without a
+    # proxy to vouch for it lets any client forge its rate-limit identity.
+    trusted_proxy_hops: int = 0
+
+    @field_validator("trusted_proxy_hops")
+    @classmethod
+    def _hops_cannot_be_negative(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("TRUSTED_PROXY_HOPS cannot be negative.")
+        return value
+
     # -------------------------------------------------- storage
 
     database_url: str = "sqlite:///./sessions.db"

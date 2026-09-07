@@ -121,6 +121,7 @@ list; these are the ones that matter most:
 | `ALLOW_REGISTRATION` | `true` | Set `false` to close sign-ups after creating your accounts. |
 | `DATABASE_URL` | `sqlite:///./sessions.db` | Point at Postgres for any real deploy. |
 | `ALLOWED_ORIGINS` | localhost:8501 | CORS allowlist. |
+| `TRUSTED_PROXY_HOPS` | `0` | Reverse proxies in front of the API. Set to `1` behind a load balancer, or rate limits meter everyone as one caller. |
 | `MAX_UPLOAD_BYTES` | 15 MB | Enforced while streaming to disk. |
 | `MAX_REPORT_PAGES` | 25 | Caps model calls per upload. |
 | `REPORT_RETENTION_HOURS` | 24 | Uploads, report indexes and job rows are swept after this. |
@@ -129,6 +130,29 @@ list; these are the ones that matter most:
 Two settings are enforced by validators rather than documentation:
 `ENVIRONMENT=production` will not start without a 32-character `SECRET_KEY`,
 and will not start with `DEBUG_LOG_REPORT_CONTENT=true`.
+
+### Rate limits and who they count
+
+Limits are per caller: per account once signed in, per address before that.
+Establishing the address takes some care, because two common deployments hide
+it and then meter every visitor as one:
+
+* **Behind a load balancer.** The caller looks like the balancer. Set
+  `TRUSTED_PROXY_HOPS` to the number of proxies in front of the API. Only that
+  many entries of `X-Forwarded-For` are trusted, counted from the right, so a
+  client cannot forge the header to escape its own limit.
+* **Serving the Streamlit frontend to more than one person.** The frontend is
+  a server-side client, so the API sees its address for every visitor. Give
+  both sides a shared machine key — `API_KEYS` here, `MEDICAL_ASSISTANT_API_KEY`
+  on the frontend — and it will pass each visitor's address through in
+  `X-Client-Address`, which is honoured only alongside a recognised key. Without
+  it, ten sign-ups a minute is the ceiling for the whole deployment.
+
+To check the hop count is right, look at the warnings the limiter logs when it
+rejects something — they carry the address it decided on. If every visitor shows
+up as the same one, `TRUSTED_PROXY_HOPS` is set too high for what your platform
+actually appends; if the address changes on every request from one browser, it
+is too low and clients are choosing their own.
 
 ---
 
@@ -197,7 +221,7 @@ What it does **not** do, and what you must add before handling real patients:
 ## Development
 
 ```bash
-pytest                      # 182 tests
+pytest                      # 206 tests
 pytest --cov=app            # with coverage
 ruff check . && ruff format --check .
 ```
@@ -207,14 +231,32 @@ every pull request.
 
 ### Deploying
 
-The API needs `GROQ_API_KEY` and, in production, `SECRET_KEY`. Point
-`DATABASE_URL` at Postgres unless losing accounts on every restart is
-acceptable — most hosts give containers an ephemeral filesystem.
+`render.yaml` describes the whole thing: the API, the Streamlit frontend and a
+Postgres instance, wired to each other. In the Render dashboard choose
+**New → Blueprint** and pick this repository. The only value you have to type
+is `GROQ_API_KEY`; `SECRET_KEY` and `API_KEYS` are generated, and the database
+URL, the API's hostname and the shared service key are resolved between the
+services.
 
-The Streamlit frontend is deployed separately. Set `FASTAPI_URL` in its secrets
-to the API's public URL, and make sure its dependency file is
-`frontendv2/requirements.txt` rather than the repository-root one, which is the
-API's much heavier dependency set.
+Deploying by hand instead, or on another host, the checklist is:
+
+| | Why |
+|---|---|
+| `GROQ_API_KEY` | Required. Startup aborts without it. |
+| `SECRET_KEY`, 32+ chars | Required when `ENVIRONMENT=production`. Pepper for password hashes — changing it later invalidates every account and session. |
+| `DATABASE_URL` → Postgres | Container filesystems are ephemeral, so the SQLite default loses every account on each deploy. |
+| `TRUSTED_PROXY_HOPS=1` | Behind a load balancer. Without it every visitor is metered as one caller and a few sign-ups lock everyone out. |
+| `API_KEYS` + `MEDICAL_ASSISTANT_API_KEY` | The same secret on the API and the frontend. Lets the frontend identify itself so each visitor gets their own allowance. |
+| Health check → `/health` | Liveness. Use this, not `/ready`, which reports degraded while the knowledge base warms up. |
+
+The frontend is a separate service: install `requirements-frontend.txt`, not the
+repository-root one, which is the API's much heavier dependency set. Its
+`FASTAPI_URL` accepts either a full URL or a bare hostname.
+
+After the first deploy, `GET /ready` is the thing to look at. It reports the
+database, the credentials and the knowledge base separately, and returns 503 if
+either of the first two is broken — a `knowledge_base: degraded` on its own just
+means the vector store is still loading.
 
 The test suite mocks every network call, so it needs neither a Groq key nor the
 vector store. `tests/conftest.py` supplies dummy settings and an in-memory

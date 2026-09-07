@@ -7,7 +7,8 @@ report_vectorstore/
 sessions_store.json
 frontendv2/sessions/
 venv/
-.venv/repomix-output.md
+.venv/
+repomix-output.md
 uploads/
 *.db
 *.sqlite3
