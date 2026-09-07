@@ -21,3 +21,7 @@ testpdf*.pdf
 htmlcov/
 
 scratch_*.db*
+
+# Personal documents that happen to live in this working copy
+resume.txt
+new_resume.txt
