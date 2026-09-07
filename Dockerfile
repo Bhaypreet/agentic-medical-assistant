@@ -64,14 +64,19 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
     CMD curl -fsS http://localhost:${PORT:-8000}/health || exit 1
 
 # gunicorn supervises uvicorn workers, so one crashed worker is replaced
-# instead of taking the container down. --proxy-headers lets the app see
-# the real client address behind a load balancer, which the rate limiter
-# needs. WEB_CONCURRENCY tunes worker count per instance size.
+# instead of taking the container down. WEB_CONCURRENCY tunes worker count
+# per instance size.
+#
+# --forwarded-allow-ips is deliberately not set to '*'. With it, uvicorn
+# overwrites the peer address with the left-most X-Forwarded-For entry,
+# which every client controls - so anyone could hand themselves a fresh
+# rate-limit bucket per request. The peer is left alone and the app works
+# out the real caller from the declared number of proxy hops instead; set
+# TRUSTED_PROXY_HOPS to the number of proxies in front of this service.
 CMD ["sh", "-c", "gunicorn app.api.main:app \
     --worker-class uvicorn.workers.UvicornWorker \
     --workers ${WEB_CONCURRENCY:-2} \
     --bind 0.0.0.0:${PORT:-8000} \
     --timeout 120 \
     --graceful-timeout 30 \
-    --access-logfile - \
-    --forwarded-allow-ips '*'"]
+    --access-logfile -"]

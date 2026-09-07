@@ -22,7 +22,28 @@ def _setting(name: str, default: str = "") -> str:
     return os.getenv(name, default)
 
 
-FASTAPI_URL = _setting("FASTAPI_URL", "http://127.0.0.1:8000").rstrip("/")
+def _normalise_url(value: str) -> str:
+    """Accept a bare host as well as a full URL.
+
+    Platform service discovery hands out a hostname with no scheme -
+    Render's `fromService` blueprint reference yields "api.onrender.com".
+    requests rejects that with MissingSchema, so every call would fail on
+    an otherwise correctly wired deploy. Assume TLS, except for the local
+    addresses that will not have it.
+    """
+
+    value = value.strip().rstrip("/")
+
+    if not value or "://" in value:
+        return value
+
+    host = value.split("/", 1)[0].split(":", 1)[0]
+    local = host in {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+
+    return f"{'http' if local else 'https'}://{value}"
+
+
+FASTAPI_URL = _normalise_url(_setting("FASTAPI_URL", "http://127.0.0.1:8000"))
 
 # Sent as X-API-Key. Required whenever the backend has API_KEYS configured.
 API_KEY = _setting("MEDICAL_ASSISTANT_API_KEY", "")

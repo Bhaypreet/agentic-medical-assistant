@@ -31,6 +31,35 @@ class AuthRequired(ApiError):
     """The caller is not signed in, or the token is no longer valid."""
 
 
+def _visitor_address() -> str:
+    """The browser's address, as best this process can tell.
+
+    This is a server-side client: it opens its own connection to the API
+    for every visitor it serves. Left to itself the API therefore sees a
+    single address for the whole deployment and meters everyone together,
+    so one person fumbling a sign-up form locks out the rest. Passing the
+    visitor on lets the API give each of them their own allowance.
+    """
+
+    import streamlit as st
+
+    try:
+        context = st.context
+
+        # Whatever fronts this app appends to X-Forwarded-For, so the
+        # visitor is the left-most entry.
+        forwarded = (context.headers.get("X-Forwarded-For") or "").split(",")
+
+        if forwarded[0].strip():
+            return forwarded[0].strip()
+
+        return (context.ip_address or "").strip()
+    except Exception:
+        # Outside a script run there is no request to read; metering then
+        # falls back to this process's address, which is the old behaviour.
+        return ""
+
+
 def _headers() -> dict:
     """Credentials for the backend.
 
@@ -45,11 +74,47 @@ def _headers() -> dict:
     if token:
         return {"Authorization": f"Bearer {token}"}
 
-    return {"X-API-Key": API_KEY} if API_KEY else {}
+    if not API_KEY:
+        return {}
+
+    headers = {"X-API-Key": API_KEY}
+    visitor = _visitor_address()
+
+    # Only honoured by the API alongside a recognised machine key, so it
+    # cannot be used by an ordinary client to escape its own limit.
+    if visitor:
+        headers["X-Client-Address"] = visitor
+
+    return headers
 
 
 def _timeout(read: float = READ_TIMEOUT) -> tuple:
     return (CONNECT_TIMEOUT, read)
+
+
+def _rate_limited_message(response: requests.Response) -> str:
+    """Tell the user how long to wait, when the server says so.
+
+    "Wait a moment" gave no way to tell a two-second pause from a
+    minute-long one, so the natural response was to keep clicking - which
+    is what had spent the allowance in the first place.
+    """
+
+    try:
+        seconds = int(float(response.headers.get("Retry-After", "")))
+    except (TypeError, ValueError):
+        seconds = 0
+
+    if seconds <= 0:
+        return "Too many attempts just now. Wait a moment and try again."
+
+    if seconds < 60:
+        wait = f"{seconds} second{'s' if seconds != 1 else ''}"
+    else:
+        minutes = (seconds + 59) // 60
+        wait = f"{minutes} minute{'s' if minutes != 1 else ''}"
+
+    return f"Too many attempts just now. Try again in about {wait}."
 
 
 def _handle(response: requests.Response):
@@ -58,9 +123,7 @@ def _handle(response: requests.Response):
         raise AuthRequired("Your session has expired. Please sign in again.")
 
     if response.status_code == 429:
-        raise ApiError(
-            "You're sending requests faster than the assistant can handle. Wait a moment."
-        )
+        raise ApiError(_rate_limited_message(response))
 
     if response.status_code == 413:
         raise ApiError("That file is too large to upload.")
