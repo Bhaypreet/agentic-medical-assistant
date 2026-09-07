@@ -18,6 +18,7 @@ from app.agents.report_chat_agent import report_chat_agent
 from app.llm.model import safe_invoke
 from app.logging_config import get_logger
 from app.rag.chain import medical_rag
+from app.safety import looks_like_emergency
 from app.session.session_manager import ANONYMOUS, session_manager
 from app.supervisor.supervisor import classify_intent
 from app.tools.doctor_finder import LookupFailed, find_doctors
@@ -128,10 +129,45 @@ CLARIFY_FALLBACK = (
 )
 
 
+def _assess(query: str) -> dict[str, Any]:
+    """Run the severity classifier and render its verdict."""
+
+    result = classify_severity(query)
+
+    conditions = ", ".join(result.get("possible_conditions") or []) or "Not enough information yet"
+
+    response = f"""## Assessment
+
+**Risk level:** {result["risk_level"]}
+
+**Suggested specialist:** {result["specialist"]}
+
+**Possible causes:** {conditions}
+
+**Why:** {result["reasoning"]}"""
+
+    return {
+        "query": query,
+        "severity": result["severity"],
+        "emergency": result["emergency"],
+        "specialist": result["specialist"],
+        "response": response,
+    }
+
+
 def ask_clarification_node(state: MedicalState) -> dict[str, Any]:
 
     session_id, owner = _ctx(state)
     query = state.get("query", "")
+
+    # A red flag is triaged on the spot. Asking "how long has this been
+    # going on?" first costs a round trip that a patient describing
+    # crushing chest pain does not have to spend.
+    if looks_like_emergency(query):
+        logger.info("Red-flag symptom: skipping clarification", extra={"session_id": session_id})
+        session_manager.clear_pending_clarification(session_id, owner=owner)
+
+        return _assess(query)
 
     session_manager.set_pending_clarification(session_id, query, owner=owner)
 
@@ -164,27 +200,7 @@ def clarify_answer_node(state: MedicalState) -> dict[str, Any]:
         else state.get("query", "")
     )
 
-    result = classify_severity(combined)
-
-    conditions = ", ".join(result.get("possible_conditions") or []) or "Not enough information yet"
-
-    response = f"""## Assessment
-
-**Risk level:** {result["risk_level"]}
-
-**Suggested specialist:** {result["specialist"]}
-
-**Possible causes:** {conditions}
-
-**Why:** {result["reasoning"]}"""
-
-    return {
-        "query": combined,
-        "severity": result["severity"],
-        "emergency": result["emergency"],
-        "specialist": result["specialist"],
-        "response": response,
-    }
+    return _assess(combined)
 
 
 # =====================================================
@@ -428,6 +444,15 @@ def report_chat_node(state: MedicalState) -> dict[str, Any]:
 # =====================================================
 
 
+def clarification_router(state: MedicalState) -> str:
+    """Nothing was assessed if we only asked a question."""
+
+    if not state.get("severity"):
+        return "end"
+
+    return severity_router(state)
+
+
 def severity_router(state: MedicalState) -> str:
 
     if state.get("severity", 0) <= 2:
@@ -483,9 +508,19 @@ def _build_graph():
         },
     )
 
+    builder.add_conditional_edges(
+        "ask_clarification_node",
+        clarification_router,
+        {
+            "end": END,
+            "rag": "rag_node",
+            "doctor": "doctor_node",
+            "ask_location": "ask_location_node",
+        },
+    )
+
     for node in (
         "greeting_node",
-        "ask_clarification_node",
         "rag_node",
         "diet_node",
         "doctor_node",
