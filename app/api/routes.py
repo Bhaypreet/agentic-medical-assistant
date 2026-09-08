@@ -114,6 +114,10 @@ def chat(
     session_manager.add_message(session_id, "user", payload.query, owner=owner)
     session_manager.add_message(session_id, "assistant", answer, owner=owner)
 
+    # Names the chat after its opening message, so the sidebar is not a
+    # column of identical "New Chat" entries. A no-op once named.
+    session_manager.ensure_chat_name(session_id, payload.query, owner=owner)
+
     return {
         "response": answer,
         "suggestions": generate_suggestions(payload.query, answer),
