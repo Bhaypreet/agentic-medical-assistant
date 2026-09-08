@@ -12,6 +12,7 @@ the same commit, but every read now takes an `owner` so that knowing a
 session id is not sufficient to read someone else's data.
 """
 
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -24,6 +25,37 @@ from app.session.db import ChatMessage, ChatSession, SessionLocal, utcnow
 logger = get_logger(__name__)
 
 ANONYMOUS = "anonymous"
+
+DEFAULT_CHAT_NAME = "New Chat"
+
+# Long enough to tell two conversations apart in a narrow sidebar, short
+# enough not to be truncated to uselessness by it.
+_TITLE_LIMIT = 48
+
+
+def title_from_message(text: str) -> str:
+    """A sidebar label derived from what the patient actually typed.
+
+    Kept to the patient's own words rather than sent to the model: naming
+    a chat is not worth a completion, and a title that quotes the question
+    back is easier to scan than one that paraphrases it.
+    """
+
+    cleaned = " ".join((text or "").split())
+
+    # Markdown and list punctuation the patient may have pasted in.
+    cleaned = re.sub(r"^[#>\-*\s]+", "", cleaned).strip()
+
+    if not cleaned:
+        return ""
+
+    if len(cleaned) <= _TITLE_LIMIT:
+        return cleaned.rstrip(" .,:;!?-")
+
+    # Cut on a word boundary so the label does not end mid-word.
+    clipped = cleaned[:_TITLE_LIMIT].rsplit(" ", 1)[0] or cleaned[:_TITLE_LIMIT]
+
+    return clipped.rstrip(" .,:;!?-") + "..."
 
 
 def _as_utc(value: datetime | None) -> datetime | None:
@@ -224,7 +256,30 @@ class SessionManager:
     def get_chat_name(self, session_id: str, owner: str = ANONYMOUS) -> str:
         with SessionLocal() as db:
             record = self._get(db, session_id, owner)
-            return record.chat_name if record else "New Chat"
+            return record.chat_name if record else DEFAULT_CHAT_NAME
+
+    def ensure_chat_name(self, session_id: str, text: str, owner: str = ANONYMOUS) -> None:
+        """Name a chat after its opening message, once.
+
+        Every chat was called "New Chat" until a report was uploaded, so a
+        sidebar with three conversations in it offered no way to tell them
+        apart. Only a still-default name is replaced: a report upload names
+        the chat after the file, and the patient's own rename must stick.
+        """
+
+        title = title_from_message(text)
+
+        if not title:
+            return
+
+        with SessionLocal() as db:
+            record = self._get_or_create(db, session_id, owner)
+
+            if record.chat_name and record.chat_name != DEFAULT_CHAT_NAME:
+                return
+
+            record.chat_name = title
+            db.commit()
 
     def list_sessions(self, owner: str = ANONYMOUS, limit: int = 100) -> list[dict[str, Any]]:
         """Sessions for one owner, most recently updated first.

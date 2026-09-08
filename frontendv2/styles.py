@@ -28,6 +28,7 @@ CSS = """
     --surface-2:    #f8fafc;
     --line:         #e2e8f0;
     --muted:        #64748b;
+    --text:         #0f172a;
     --shadow:       rgba(15, 118, 110, 0.20);
     --shadow-soft:  rgba(15, 23, 42, 0.08);
 }
@@ -43,6 +44,7 @@ CSS = """
         --surface-2:    #161b25;
         --line:         #2a3341;
         --muted:        #94a3b8;
+        --text:         #e2e8f0;
         --shadow:       rgba(0, 0, 0, 0.45);
         --shadow-soft:  rgba(0, 0, 0, 0.35);
     }
@@ -278,6 +280,48 @@ button[data-testid="stBaseButton-primaryFormSubmit"]:hover {
 }
 
 [data-testid="stCaptionContainer"] { color: var(--muted); }
+
+/* ----------------------------------------------------- legibility -- */
+
+/*
+ * Surfaces here follow prefers-color-scheme, but Streamlit paints its own
+ * text colour from its base theme, and the two can disagree - a viewer on
+ * a dark OS whose Streamlit base resolved to light got Streamlit's near
+ * black label text on this stylesheet's dark card, which is unreadable.
+ *
+ * Anything drawn on a surface this file owns therefore states its own
+ * colour instead of inheriting one, so the pairing is readable whichever
+ * way the two themes disagree.
+ */
+
+[data-testid="stSidebar"],
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p,
+[data-testid="stForm"],
+[data-testid="stForm"] p,
+[data-testid="stForm"] label,
+[data-testid="stForm"] [data-testid="stWidgetLabel"] p,
+[data-testid="stMetric"],
+[data-testid="stMetric"] [data-testid="stMetricLabel"],
+[data-testid="stMetric"] [data-testid="stMetricLabel"] p,
+[data-testid="stMetric"] [data-testid="stMetricValue"] {
+    color: var(--text);
+}
+
+/* The widget label sits outside the form on some Streamlit versions. */
+[data-testid="stWidgetLabel"] p,
+.stTextInput label,
+.stNumberInput label,
+.stSelectbox label,
+.stTextArea label {
+    color: var(--text);
+}
+
+/* A metric's caption stays secondary, but still has to be visible. */
+[data-testid="stMetric"] [data-testid="stMetricDelta"] {
+    color: var(--muted);
+}
 
 </style>
 """
