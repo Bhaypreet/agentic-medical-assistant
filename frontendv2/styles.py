@@ -8,9 +8,10 @@ Streamlit sanitises the unclosed tag and renders it as a sibling - so
 class-wrapper scoping is silently inert. [data-testid="stMain"] and
 [data-testid="stSidebar"] are stable and do work.
 
-Every colour is a token that flips under prefers-color-scheme. The
-previous stylesheet hardcoded light surfaces, so the app rendered dark
-text on dark backgrounds for anyone using dark mode.
+Every colour is a token, and there is one palette: the theme is pinned to
+light in .streamlit/config.toml. Following the viewer's OS preference as
+well let Streamlit and this stylesheet disagree about which theme was in
+force, which left dark text on dark cards on some laptops.
 """
 
 CSS = """
@@ -243,12 +244,24 @@ button[data-testid="stBaseButton-primaryFormSubmit"]:hover {
     border-color: var(--brand) !important;
 }
 
-/* The sign-in card. */
+/* The label is a <p> inside the button, so it takes the legibility rule
+   below rather than the button's own colour - which left "Sign in" in dark
+   navy on teal. */
+button[kind="primary"] p,
+button[data-testid="stBaseButton-primary"] p,
+button[data-testid="stBaseButton-primaryFormSubmit"] p {
+    color: #ffffff !important;
+}
+
+/* The sign-in card. White, so Streamlit's own grey field fill stands out
+   against it: with the card in the same grey as the fields, the sign-in
+   form looked like it had no boxes to type in. */
 [data-testid="stForm"] {
     border: 1px solid var(--line);
     border-radius: 14px;
     padding: 1.25rem 1.4rem;
-    background: var(--surface-2);
+    background: var(--surface);
+    box-shadow: 0 4px 14px var(--shadow-soft);
 }
 
 /* ------------------------------------------------------ containers -- */
@@ -271,14 +284,10 @@ button[data-testid="stBaseButton-primaryFormSubmit"]:hover {
 /* ----------------------------------------------------- legibility -- */
 
 /*
- * Surfaces here follow prefers-color-scheme, but Streamlit paints its own
- * text colour from its base theme, and the two can disagree - a viewer on
- * a dark OS whose Streamlit base resolved to light got Streamlit's near
- * black label text on this stylesheet's dark card, which is unreadable.
- *
- * Anything drawn on a surface this file owns therefore states its own
- * colour instead of inheriting one, so the pairing is readable whichever
- * way the two themes disagree.
+ * The theme is pinned to light in .streamlit/config.toml. Text on the
+ * surfaces this file owns still states its colour explicitly, so the pair
+ * stays readable even if the app is launched without that config file
+ * (from frontendv2/, say) and Streamlit falls back to a theme of its own.
  */
 
 [data-testid="stSidebar"],
