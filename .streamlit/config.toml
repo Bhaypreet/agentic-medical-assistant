@@ -13,7 +13,9 @@
 base = "light"
 primaryColor = "#0d9488"
 backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f8fafc"
+# Streamlit fills input fields with this. It has to differ visibly from
+# the white cards the fields sit on, or the fields disappear into them.
+secondaryBackgroundColor = "#eef2f6"
 textColor = "#0f172a"
 font = "sans serif"
 
