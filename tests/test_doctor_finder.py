@@ -2,7 +2,17 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.tools import doctor_finder
 from app.tools.doctor_finder import LookupFailed, find_doctors
+
+
+@pytest.fixture(autouse=True)
+def _fresh_geocode_cache():
+    """The cache would otherwise let one test's geocode answer another's."""
+
+    doctor_finder._GEOCODE_CACHE.clear()
+    yield
+    doctor_finder._GEOCODE_CACHE.clear()
 
 
 def _geocode(lat="30.9", lon="75.8"):
@@ -105,12 +115,88 @@ def test_blank_location_returns_empty():
 @patch("app.tools.doctor_finder.time.sleep")
 @patch("app.tools.doctor_finder.requests.post", side_effect=OSError("network down"))
 @patch("app.tools.doctor_finder.requests.get")
-def test_all_mirrors_failing_raises_rather_than_reporting_no_results(mock_get, _post, _sleep):
+def test_every_source_failing_raises_rather_than_reporting_no_results(mock_get, _post, _sleep):
 
-    mock_get.return_value = _geocode()
+    # Geocoding works; Overpass and Nominatim's facility search both fail.
+    mock_get.side_effect = [_geocode(), OSError("down"), OSError("down")]
 
     # "we could not check" must be distinguishable from "nothing nearby",
     # so the caller can say so instead of telling a patient there are no
     # hospitals near them.
     with pytest.raises(LookupFailed):
         find_doctors("Ludhiana", "hospital")
+
+
+def _nominatim(places):
+    response = MagicMock()
+    response.json.return_value = places
+    response.raise_for_status.return_value = None
+    return response
+
+
+@patch("app.tools.doctor_finder.time.sleep")
+@patch("app.tools.doctor_finder.requests.post", side_effect=OSError("429 from a shared cloud IP"))
+@patch("app.tools.doctor_finder.requests.get")
+def test_overpass_being_unreachable_falls_back_to_nominatim(mock_get, _post, _sleep):
+    """What production hit: every Overpass mirror refused Render, so every
+    city came back as "couldn't reach the hospital directory"."""
+
+    mock_get.side_effect = [
+        _geocode("30.9661", "76.5231"),
+        _nominatim(
+            [
+                {
+                    "name": "Civil Hospital Ropar",
+                    "lat": "30.9700",
+                    "lon": "76.5300",
+                    "address": {"road": "Hospital Road", "city": "Rupnagar"},
+                    "extratags": {"phone": "+91 1881 222222"},
+                }
+            ]
+        ),
+        _nominatim([]),
+    ]
+
+    results = find_doctors("Ropar", "hospital")
+
+    assert [r["name"] for r in results] == ["Civil Hospital Ropar"]
+    assert results[0]["phone"] == "+91 1881 222222"
+    assert "Hospital Road" in results[0]["address"]
+    assert results[0]["distance_km"] < 5
+
+
+@patch("app.tools.doctor_finder.time.sleep")
+@patch("app.tools.doctor_finder.requests.post", side_effect=OSError("down"))
+@patch("app.tools.doctor_finder.requests.get")
+def test_an_empty_fallback_means_nothing_nearby_not_unreachable(mock_get, _post, _sleep):
+    mock_get.side_effect = [_geocode(), _nominatim([]), _nominatim([])]
+
+    assert find_doctors("Tiny Village", "hospital") == []
+
+
+def test_the_whole_lookup_is_time_bounded():
+    """It has to finish inside the frontend's 60s read timeout."""
+
+    assert doctor_finder.LOOKUP_BUDGET < 60
+    assert doctor_finder.OVERPASS_BUDGET < doctor_finder.LOOKUP_BUDGET
+
+
+@patch("app.tools.doctor_finder.time.sleep")
+@patch("app.tools.doctor_finder.requests.post", side_effect=OSError("down"))
+@patch("app.tools.doctor_finder.requests.get")
+def test_the_same_facility_is_listed_once(mock_get, _post, _sleep):
+    same = {"name": "Civil Hospital Ropar", "lat": "30.9670", "lon": "76.5235", "address": {}}
+    near_twin = {"name": "civil hospital  ropar", "lat": "30.9672", "lon": "76.5236", "address": {}}
+    other = {"name": "Pannu Hospital", "lat": "30.9700", "lon": "76.5300", "address": {}}
+
+    mock_get.side_effect = [
+        _geocode("30.9661", "76.5231"),
+        _nominatim([same, other]),
+        _nominatim([near_twin]),
+    ]
+
+    names = [r["name"] for r in find_doctors("Ropar", "hospital")]
+
+    assert names.count("Civil Hospital Ropar") == 1
+    assert "civil hospital  ropar" not in names
+    assert "Pannu Hospital" in names

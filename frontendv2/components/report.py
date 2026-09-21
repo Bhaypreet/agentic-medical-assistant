@@ -39,7 +39,10 @@ def show_report(report) -> None:
 
                 name_column.write(name)
                 value_column.write(f"{info.get('value', '-')} {info.get('unit', '')}".strip())
-                status_column.write(
+                # st.markdown, not st.write: write() takes no `help`, and
+                # passing one raised a TypeError that took down the whole
+                # page as soon as an analysed report was shown.
+                status_column.markdown(
                     f"{STATUS_ICON.get(status, '⚪')} {status}",
                     help=STATUS_HELP.get(status),
                 )

@@ -56,7 +56,7 @@ def _retry_after_seconds(error: Exception, attempt: int) -> float:
 
     # Exponential backoff with jitter, so concurrent callers do not all
     # retry in lockstep and re-trigger the same limit.
-    return min(2**attempt, 30) + random.uniform(0, 1)
+    return min(2**attempt, 8) + random.uniform(0, 1)
 
 
 def _log_usage(response, elapsed_seconds: float) -> None:
@@ -89,7 +89,7 @@ def _log_usage(response, elapsed_seconds: float) -> None:
     )
 
 
-def safe_invoke(prompt, max_retries: int | None = None):
+def safe_invoke(prompt, max_retries: int | None = None, budget_seconds: float | None = None):
     """Invoke the model, retrying transient failures.
 
     Retries rate limits (the free tier has a tokens-per-minute cap) as
@@ -102,6 +102,8 @@ def safe_invoke(prompt, max_retries: int | None = None):
     retryable = (RateLimitError, APIConnectionError, APITimeoutError, InternalServerError)
 
     attempts = max_retries if max_retries is not None else settings.groq_max_retries
+    budget = budget_seconds if budget_seconds is not None else settings.groq_call_budget_seconds
+    deadline = time.monotonic() + budget
     last_error: Exception | None = None
 
     for attempt in range(attempts):
@@ -120,6 +122,15 @@ def safe_invoke(prompt, max_retries: int | None = None):
                 break
 
             wait = _retry_after_seconds(error, attempt)
+
+            # A retry that cannot finish before the budget runs out only
+            # delays the failure the caller is going to see anyway.
+            if time.monotonic() + wait + 1 >= deadline:
+                logger.warning(
+                    "Model call out of time budget; not retrying",
+                    extra={"error_type": type(error).__name__, "budget_seconds": budget},
+                )
+                break
 
             logger.warning(
                 "Model call failed; retrying",

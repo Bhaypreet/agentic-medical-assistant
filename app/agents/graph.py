@@ -22,6 +22,7 @@ from app.safety import looks_like_emergency
 from app.session.session_manager import ANONYMOUS, session_manager
 from app.supervisor.supervisor import classify_intent
 from app.tools.doctor_finder import LookupFailed, find_doctors
+from app.tools.location import extract_location
 from app.tools.severity_classifier import classify_severity
 
 logger = get_logger(__name__)
@@ -327,12 +328,6 @@ def resume_doctor_node(state: MedicalState) -> dict[str, Any]:
 
 
 # fmt: off
-_GENERIC_TERMS = {
-    "hospital", "hospitals", "doctor", "doctors", "clinic", "clinics",
-    "specialist", "cardiologist", "dermatologist", "dentist", "neurologist",
-    "orthopedic", "gynecologist", "pediatrician", "ent specialist", "me", "us",
-    "here", "somewhere",
-}
 
 _SPECIALISTS = [
     "cardiologist", "dermatologist", "dentist", "neurologist",
@@ -342,19 +337,7 @@ _SPECIALISTS = [
 
 
 def _extract_location_from_query(query: str) -> str:
-
-    match = re.search(r"(?:near|nearby|in|at|around)\s+(.+)", query, re.IGNORECASE)
-
-    if not match:
-        return ""
-
-    candidate = match.group(1).strip(" .?!")
-    words = candidate.lower().split()
-
-    if not words or all(word in _GENERIC_TERMS for word in words):
-        return ""
-
-    return candidate
+    return extract_location(query)
 
 
 def hospital_search_node(state: MedicalState) -> dict[str, Any]:
@@ -369,6 +352,8 @@ def hospital_search_node(state: MedicalState) -> dict[str, Any]:
     if not location:
         session_manager.set_pending_specialist(session_id, specialist, owner=owner)
         return {"response": "📍 Sure - which city or area should I search near?"}
+
+    session_manager.clear_pending_specialist(session_id, owner=owner)
 
     return {"response": _lookup(location, specialist)["response"]}
 
