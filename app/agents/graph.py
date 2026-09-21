@@ -362,12 +362,21 @@ def _format_doctor_response(doctors: list[dict], specialist: str, location: str)
 
     if not doctors:
         return (
-            f"I couldn't find any {specialist}s listed near **{location}**.\n\n"
+            f"I couldn't find any hospitals or clinics listed near **{location}**.\n\n"
             "The directory's coverage varies by area - try a nearby larger town "
             "or city name."
         )
 
-    lines = [f"## {specialist.title()}s near {location}\n"]
+    lines = [f"## Hospitals and clinics near {location}\n"]
+
+    # The directory knows facilities, not specialties. A "Cardiologists near
+    # Bangalore" heading over a list that included an eye hospital claimed
+    # something the data never said.
+    if specialist and specialist.lower() not in {"hospital", "hospitals", "general physician"}:
+        lines.append(
+            "These are the nearest facilities - the directory does not record which "
+            f"ones have a **{specialist}**, so please call ahead to check.\n"
+        )
 
     for doctor in doctors:
         lat = doctor["location"]["lat"]

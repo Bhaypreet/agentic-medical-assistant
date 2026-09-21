@@ -86,3 +86,43 @@ def test_a_red_flag_still_goes_to_triage_first():
 def test_without_a_place_the_lookup_still_asks_for_one():
     sid, owner = _session()
     assert classify_intent("find a hospital near me", sid, owner=owner) == "hospital_search"
+
+
+def test_a_specialty_is_not_claimed_the_directory_cannot_confirm():
+    """ "Cardiologists near Bangalore" over a list including an eye hospital."""
+
+    from app.agents.graph import _format_doctor_response
+
+    doctors = [
+        {
+            "name": "Nethradhama Eye Hospital",
+            "distance_km": 6.2,
+            "address": "Bangalore",
+            "phone": "",
+            "location": {"lat": 12.9, "lng": 77.5},
+        }
+    ]
+
+    text = _format_doctor_response(doctors, "cardiologist", "Bangalore")
+
+    assert "Cardiologists near" not in text
+    assert "Hospitals and clinics near Bangalore" in text
+    assert "call ahead" in text
+
+
+def test_a_plain_hospital_search_carries_no_specialty_caveat():
+    from app.agents.graph import _format_doctor_response
+
+    doctors = [
+        {
+            "name": "Civil Hospital",
+            "distance_km": 0.3,
+            "address": "Ropar",
+            "phone": "",
+            "location": {"lat": 30.9, "lng": 76.5},
+        }
+    ]
+
+    text = _format_doctor_response(doctors, "hospital", "Ropar")
+
+    assert "does not record which" not in text

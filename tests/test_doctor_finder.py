@@ -200,3 +200,29 @@ def test_the_same_facility_is_listed_once(mock_get, _post, _sleep):
     assert names.count("Civil Hospital Ropar") == 1
     assert "civil hospital  ropar" not in names
     assert "Pannu Hospital" in names
+
+
+@patch("app.tools.doctor_finder.time.sleep")
+@patch("app.tools.doctor_finder.requests.get")
+def test_a_hanging_overpass_does_not_hold_back_a_nominatim_answer(mock_get, _sleep):
+    """On Render every mirror hangs; waiting them out made each search ~14s."""
+
+    import time as real_time
+
+    def hang(*_args, **_kwargs):
+        real_time.sleep(5)
+        raise OSError("timed out")
+
+    mock_get.side_effect = [
+        _geocode(),
+        _nominatim([{"name": "City Hospital", "lat": "30.91", "lon": "75.81", "address": {}}]),
+        _nominatim([]),
+    ]
+
+    with patch("app.tools.doctor_finder.requests.post", side_effect=hang):
+        started = real_time.monotonic()
+        results = find_doctors("Ludhiana", "hospital")
+        elapsed = real_time.monotonic() - started
+
+    assert [r["name"] for r in results] == ["City Hospital"]
+    assert elapsed < doctor_finder.OVERPASS_GRACE + 2

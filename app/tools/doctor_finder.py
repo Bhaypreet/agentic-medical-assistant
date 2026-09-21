@@ -7,7 +7,7 @@ so several mirrors are tried before reporting no results.
 
 import math
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, as_completed, wait
 from concurrent.futures import TimeoutError as FuturesTimeout
 
 import requests
@@ -45,6 +45,9 @@ OVERPASS_TIMEOUT = 20
 # mirror failed for every city: the main instance rejected in ~3s and the
 # rest hung. So it gets a short leash, and Nominatim is the fallback.
 OVERPASS_BUDGET = 10
+
+# How long a finished Nominatim answer waits for a still-running Overpass.
+OVERPASS_GRACE = 2
 MAX_RESULTS = 8
 
 # Cities are asked about over and over; Nominatim's usage policy also asks
@@ -212,6 +215,9 @@ def _nominatim_facilities(lat, lng, radius_meters, deadline: float) -> list[dict
             address = place.get("address") or {}
             extra = place.get("extratags") or {}
 
+            if not place.get("name"):
+                continue
+
             try:
                 point_lat, point_lng = float(place["lat"]), float(place["lon"])
             except (KeyError, TypeError, ValueError):
@@ -235,6 +241,24 @@ def _nominatim_facilities(lat, lng, radius_meters, deadline: float) -> list[dict
             )
 
     return elements if answered else None
+
+
+def _overpass_elements(lat, lng, radius_meters, deadline: float) -> list[dict]:
+    """Overpass, with one wider retry for sparse towns. Raises LookupFailed."""
+
+    elements = []
+
+    for radius in (radius_meters, radius_meters * 3):
+        if _remaining(deadline) <= 2:
+            break
+
+        # A mirror that refused the first query will refuse a wider one.
+        elements = _run_overpass_query(lat, lng, radius, deadline).get("elements", [])
+
+        if elements:
+            break
+
+    return elements
 
 
 def _distance_km(lat1, lng1, lat2, lng2) -> float:
@@ -283,35 +307,47 @@ def find_doctors(location: str, specialist: str, radius_meters: int = 8000) -> l
         logger.info("Location could not be geocoded")
         return []
 
-    elements = []
-    reached = False
+    # Both sources are asked at once. Asked in turn, a refusing Overpass
+    # spent its whole budget before Nominatim was even tried - ~14s a
+    # search on Render, where Overpass never answers.
     overpass_deadline = min(deadline, time.monotonic() + OVERPASS_BUDGET)
+    pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="facilities")
 
-    # One wider retry for sparse towns - but only if Overpass answered at
-    # all. A mirror that refused us will refuse the wider query too.
-    for radius in (radius_meters, radius_meters * 3):
-        if _remaining(overpass_deadline) <= 2:
-            break
+    try:
+        overpass = pool.submit(_overpass_elements, lat, lng, radius_meters, overpass_deadline)
+        nominatim = pool.submit(_nominatim_facilities, lat, lng, radius_meters * 2, deadline)
 
-        try:
-            elements = _run_overpass_query(lat, lng, radius, overpass_deadline).get("elements", [])
-            reached = True
-        except LookupFailed:
-            break
+        wait([overpass, nominatim], timeout=_remaining(deadline), return_when=FIRST_COMPLETED)
 
-        if elements:
-            break
+        # Overpass is preferred - it knows about clinics and phone numbers
+        # - but once Nominatim has an answer it only gets a short grace.
+        if nominatim.done() and not overpass.done():
+            wait([overpass], timeout=min(OVERPASS_GRACE, max(_remaining(overpass_deadline), 0)))
 
-    if not elements:
-        fallback = _nominatim_facilities(lat, lng, radius_meters * 2, deadline)
+        elements, reached = [], False
 
-        # "Nothing near you" and "we could not check" must stay distinct,
-        # so a patient is never told there are no hospitals when neither
-        # source could be asked.
-        if fallback is None and not reached:
-            raise LookupFailed("Could not reach the facility directory.")
+        if overpass.done():
+            try:
+                elements = overpass.result()
+                reached = True
+            except Exception:
+                elements = []
 
-        elements = fallback or []
+        if not elements:
+            try:
+                fallback = nominatim.result(timeout=max(_remaining(deadline), 0))
+            except Exception:
+                fallback = None
+
+            # "Nothing near you" and "we could not check" must stay
+            # distinct, so a patient is never told there are no hospitals
+            # when neither source could be asked.
+            if fallback is None and not reached:
+                raise LookupFailed("Could not reach the facility directory.")
+
+            elements = fallback or []
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
 
     results = []
 
