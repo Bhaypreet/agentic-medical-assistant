@@ -61,3 +61,7 @@ UPLOAD_READ_TIMEOUT = 120
 # How long to keep polling a report job before giving up.
 JOB_POLL_INTERVAL = 2
 JOB_POLL_TIMEOUT = 600
+
+# Kept in step with the API's MIN_PASSWORD_LENGTH, for an instant check on
+# the sign-up form. The API still enforces its own value.
+MIN_PASSWORD_LENGTH = int(_setting("MIN_PASSWORD_LENGTH", "10"))

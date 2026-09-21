@@ -1,12 +1,20 @@
 # Streamlit theme.
 #
-# Only the brand colour and font are pinned. `base` is deliberately left
-# unset so the app follows the viewer's light/dark preference instead of
-# forcing one - the previous stylesheet hardcoded light surfaces, which
-# rendered dark grey text on a dark background for anyone using dark mode.
+# The theme is pinned to light for every viewer.
+#
+# It used to follow each viewer's own preference, but that preference is
+# read twice - Streamlit resolves its base theme one way, and the custom
+# stylesheet read prefers-color-scheme another - and on some machines the
+# two disagreed. Streamlit painted near-black text while the stylesheet
+# painted a dark card behind it, and labels, answers and the BMI value
+# became unreadable. One fixed theme means one set of colours, everywhere.
 
 [theme]
+base = "light"
 primaryColor = "#0d9488"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f8fafc"
+textColor = "#0f172a"
 font = "sans serif"
 
 [client]

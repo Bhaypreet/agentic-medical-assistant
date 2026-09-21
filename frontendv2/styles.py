@@ -33,22 +33,9 @@ CSS = """
     --shadow-soft:  rgba(15, 23, 42, 0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --brand:        #2dd4bf;
-        --brand-deep:   #0f766e;
-        --brand-tint:   #12312d;
-        --brand-line:   #245f57;
-        --brand-text:   #5eead4;
-        --surface:      #0e1117;
-        --surface-2:    #161b25;
-        --line:         #2a3341;
-        --muted:        #94a3b8;
-        --text:         #e2e8f0;
-        --shadow:       rgba(0, 0, 0, 0.45);
-        --shadow-soft:  rgba(0, 0, 0, 0.35);
-    }
-}
+/* No prefers-color-scheme override: the theme is pinned to light in
+   .streamlit/config.toml, and following the OS here as well is what let
+   the two disagree and hide text on some laptops. */
 
 html, body, [class*="css"], .stMarkdown {
     font-family: 'Plus Jakarta Sans', -apple-system, "Segoe UI", Roboto, sans-serif;

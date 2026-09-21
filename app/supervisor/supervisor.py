@@ -20,7 +20,9 @@ import re
 import unicodedata
 
 from app.logging_config import get_logger
+from app.safety import looks_like_emergency
 from app.session.session_manager import ANONYMOUS, session_manager
+from app.tools.location import extract_location
 
 logger = get_logger(__name__)
 
@@ -193,6 +195,15 @@ def classify_intent(
     def _clear_pending() -> None:
         session_manager.clear_pending_specialist(session_id, owner=owner)
         session_manager.clear_pending_clarification(session_id, owner=owner)
+
+    # 0. An explicit request for care in a named place is answered as asked.
+    #    It used to be checked after every pending flow, so a chat still
+    #    waiting on a clarification or a location read "hospitals in Delhi"
+    #    as the answer to that, and the patient never got a list. A red flag
+    #    still goes to triage first - that path escalates, a list does not.
+    if _contains(text, LOOKUP_WORDS) and extract_location(query) and not looks_like_emergency(text):
+        _clear_pending()
+        return "hospital_search"
 
     has_symptom = _contains(text, SYMPTOM_WORDS)
     is_personal = _contains(text, PERSONAL_MARKERS)

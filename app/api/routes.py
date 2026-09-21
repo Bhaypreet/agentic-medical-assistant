@@ -364,6 +364,10 @@ def chat_stream(
         session_manager.add_message(session_id, "user", payload.query, owner=owner)
         session_manager.add_message(session_id, "assistant", final, owner=owner)
 
+        # The UI talks to this endpoint, not /chat - naming the chat only
+        # there meant it never happened in the app itself.
+        session_manager.ensure_chat_name(session_id, payload.query, owner=owner)
+
         yield _sse("message", {"response": final})
         yield _sse("suggestions", {"suggestions": generate_suggestions(payload.query, final)})
         yield _sse("done", {"session_id": session_id})

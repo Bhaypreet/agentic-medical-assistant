@@ -72,8 +72,13 @@ class Settings(BaseSettings):
 
     groq_model: str = "openai/gpt-oss-20b"
     groq_temperature: float = 0.2
-    groq_timeout_seconds: float = 60.0
-    groq_max_retries: int = 4
+    # One attempt may take up to groq_timeout_seconds, and every retry waits
+    # before trying again. At 60s x 4 attempts plus backoff, a rate-limited
+    # turn could run for minutes while the frontend gave up after 60s. The
+    # budget caps the whole call, retries and waits included, inside that.
+    groq_timeout_seconds: float = 25.0
+    groq_max_retries: int = 3
+    groq_call_budget_seconds: float = 40.0
     groq_transcription_model: str = "whisper-large-v3-turbo"
 
     # -------------------------------------------------- http

@@ -88,3 +88,38 @@ def test_an_empty_setting_stays_empty():
     import config
 
     assert config._normalise_url("") == ""
+
+
+# ------------------------------------------------- sign-up pre-check
+
+
+def test_a_short_password_is_caught_before_any_network_call():
+    """It used to cost a round trip - 30-60s when the API was asleep."""
+
+    from components.auth_gate import registration_problem
+
+    with patch_request() as request:
+        problem = registration_problem("valid_name", "short", "short")
+
+    assert "at least" in problem
+    request.assert_not_called()
+
+
+def test_the_sign_up_rules_match_the_server():
+    from components.auth_gate import registration_problem
+
+    assert registration_problem("", "long enough pw", "long enough pw")
+    assert registration_problem("ab", "long enough pw", "long enough pw")  # too short
+    assert registration_problem("-bad", "long enough pw", "long enough pw")  # bad start
+    assert registration_problem("has space", "long enough pw", "long enough pw")
+    assert registration_problem("valid_name", "          ", "          ")  # whitespace
+    assert registration_problem("valid_name", "long enough pw", "different pw!") == (
+        "The two passwords do not match."
+    )
+    assert registration_problem("Valid.Name-1", "long enough pw", "long enough pw") is None
+
+
+def patch_request():
+    from unittest.mock import patch
+
+    return patch("api.requests.request")

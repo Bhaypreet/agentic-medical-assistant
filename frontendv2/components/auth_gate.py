@@ -6,9 +6,42 @@ so closing the tab ends the session on this side and the token expires on
 the server's side regardless.
 """
 
+import re
+
 import streamlit as st
 
 import api
+from config import MIN_PASSWORD_LENGTH
+
+# Mirrors app.auth.service.USERNAME_PATTERN. The server stays the authority;
+# this only saves the patient a network round trip - and, when the backend
+# is asleep on a free instance, a 30-60s wait - to learn their password is
+# one character short.
+_USERNAME = re.compile(r"^[a-z0-9][a-z0-9_.-]{2,31}$")
+
+
+def registration_problem(username: str, password: str, confirm: str) -> str | None:
+    """What is wrong with a sign-up form, checked without calling the API."""
+
+    if not username or not password:
+        return "Choose a username and password."
+
+    if not _USERNAME.match(username.strip().lower()):
+        return (
+            "Username must be 3-32 characters, start with a letter or number, "
+            "and use only letters, numbers, dots, hyphens or underscores."
+        )
+
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return f"Password must be at least {MIN_PASSWORD_LENGTH} characters."
+
+    if not password.strip():
+        return "Password cannot be only whitespace."
+
+    if password != confirm:
+        return "The two passwords do not match."
+
+    return None
 
 
 def current_user() -> dict | None:
@@ -68,18 +101,16 @@ def _register_form() -> None:
         password = st.text_input(
             "Choose a password",
             type="password",
-            help="At least 10 characters.",
+            help=f"At least {MIN_PASSWORD_LENGTH} characters.",
             autocomplete="new-password",
         )
         confirm = st.text_input("Confirm password", type="password", autocomplete="new-password")
 
         if st.form_submit_button("Create account", use_container_width=True, type="primary"):
-            if not username or not password:
-                st.error("Choose a username and password.")
-                return
+            problem = registration_problem(username, password, confirm)
 
-            if password != confirm:
-                st.error("The two passwords do not match.")
+            if problem:
+                st.error(problem)
                 return
 
             try:
@@ -95,6 +126,11 @@ def require_sign_in() -> bool:
 
     if is_signed_in():
         return True
+
+    # Once per browser session: wake the API while the form is being filled.
+    if not st.session_state.get("_backend_woken"):
+        st.session_state["_backend_woken"] = True
+        api.wake_backend()
 
     st.markdown(
         """

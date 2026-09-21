@@ -8,6 +8,7 @@ travels on the X-API-Key header.
 
 import contextlib
 import json
+import threading
 import time
 
 import requests
@@ -164,6 +165,25 @@ def _request(method: str, path: str, *, read_timeout: float = READ_TIMEOUT, **kw
         raise ApiError("Can't reach the assistant. Is the backend running?") from exc
 
     return _handle(response)
+
+
+# ----------------------------------------------------------------- wake
+
+
+def wake_backend() -> None:
+    """Start the API waking up, without waiting for it.
+
+    The API runs on an instance that sleeps after fifteen idle minutes,
+    and the first request after that waits 30-60s for it to start. Firing
+    a health check while the sign-in page is on screen spends that wait
+    while the patient is typing, instead of after they press the button.
+    """
+
+    def _ping() -> None:
+        with contextlib.suppress(Exception):
+            requests.get(f"{FASTAPI_URL}/health", timeout=(CONNECT_TIMEOUT, 90))
+
+    threading.Thread(target=_ping, name="wake-backend", daemon=True).start()
 
 
 # ----------------------------------------------------------------- chat

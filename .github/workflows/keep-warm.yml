@@ -1,0 +1,30 @@
+name: Keep API warm
+
+# The API is on Render's free plan, which puts an instance to sleep after
+# fifteen minutes without traffic; the next visitor then waits 30-60s for
+# it to start. A health check every ten minutes keeps it awake.
+#
+# One always-on instance is ~744 hours a month, inside the free plan's 750
+# instance-hours - but that allowance is shared by every free service in
+# the workspace, so add a second free service and this starts eating into
+# its hours. GitHub also delays scheduled runs under load, so the odd cold
+# start can still slip through.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: keep-warm
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /health
+        env:
+          API_URL: ${{ vars.API_URL || 'https://agentic-medical-assistant.onrender.com' }}
+        run: curl --fail --silent --show-error --max-time 120 "$API_URL/health"
