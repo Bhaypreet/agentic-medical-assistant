@@ -133,6 +133,14 @@ class Settings(BaseSettings):
 
         return value
 
+    # Bounds each attempt to reach Postgres, so an unreachable database
+    # fails fast and is retried rather than hanging startup.
+    database_connect_timeout_seconds: int = 10
+
+    # While the database is unreachable the API stays up and answers 503,
+    # retrying the connection this often until it comes back.
+    database_retry_interval_seconds: float = 30.0
+
     upload_dir: Path = Path("uploads")
     vectorstore_dir: Path = Path("vectorstore")
     report_vectorstore_dir: Path = Path("report_vectorstore")

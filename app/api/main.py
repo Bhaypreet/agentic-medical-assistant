@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy.exc import OperationalError
 
 from app.api.auth_routes import router as auth_router
 from app.api.rate_limit import limiter
@@ -16,7 +17,7 @@ from app.api.routes import router
 from app.config import settings
 from app.jobs import report_jobs
 from app.logging_config import configure_logging, get_logger, request_id_var
-from app.session.db import init_db
+from app.session.db import init_db_with_retry
 from app.session.session_manager import SessionNotFound
 from app.storage.cleanup import start_retention_worker
 
@@ -56,6 +57,37 @@ async def _warm_retrieval(app: FastAPI) -> None:
         )
 
 
+async def _connect_database(app: FastAPI) -> None:
+    """Keep trying to reach the database until it answers.
+
+    init_db() used to run inline and raise when the database was down, so
+    uvicorn aborted startup, gunicorn exited with status 3 and the
+    platform restarted the container into the same failure - every
+    request failed, even /health. The process now stays up, data
+    endpoints answer 503, and the first successful attempt brings it back
+    without a restart.
+    """
+
+    while True:
+        try:
+            await asyncio.to_thread(init_db_with_retry)
+        except asyncio.CancelledError:
+            raise
+        except OperationalError as error:
+            logger.error(
+                "Database unreachable; retrying. Check DATABASE_URL and that "
+                "the database still exists (Render's free Postgres expires "
+                "30 days after creation).",
+                extra={"error": str(error.orig or error).splitlines()[0]},
+            )
+        else:
+            app.state.database_ready = True
+            logger.info("Database ready")
+            return
+
+        await asyncio.sleep(settings.database_retry_interval_seconds)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Start-up and shut-down work.
@@ -69,7 +101,16 @@ async def lifespan(app: FastAPI):
 
     logger.info("Starting service", extra={"environment": settings.environment})
 
-    init_db()
+    # One bounded attempt inline, so a healthy database has its tables
+    # before the first request; anything else is retried in the background.
+    try:
+        await asyncio.to_thread(init_db_with_retry, attempts=1)
+        app.state.database_ready = True
+        db_task = None
+    except OperationalError:
+        app.state.database_ready = False
+        db_task = asyncio.create_task(_connect_database(app))
+
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     settings.report_vectorstore_dir.mkdir(parents=True, exist_ok=True)
 
@@ -89,6 +130,8 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    if db_task:
+        db_task.cancel()
     warm_task.cancel()
     stop_cleanup()
     report_jobs.shutdown()
@@ -155,6 +198,19 @@ async def session_not_found_handler(_request: Request, _exc: SessionNotFound):
     # Deliberately indistinguishable from "does not exist", so the
     # response cannot be used to probe for other people's session ids.
     return JSONResponse(status_code=404, content={"detail": "Session not found."})
+
+
+@app.exception_handler(OperationalError)
+async def database_unavailable_handler(_request: Request, _exc: OperationalError):
+    # The database is down or unreachable, not the request at fault. 503
+    # tells the caller to retry, where a 500 would read as a bug.
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": "The service is temporarily unavailable. Please try again shortly.",
+            "request_id": request_id_var.get(),
+        },
+    )
 
 
 @app.exception_handler(Exception)

@@ -5,6 +5,7 @@ than raw sqlite3 so the same code runs against Postgres in production by
 changing DATABASE_URL alone.
 """
 
+import time
 from datetime import UTC, datetime
 
 from sqlalchemy import (
@@ -19,6 +20,7 @@ from sqlalchemy import (
     create_engine,
     event,
 )
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
 from app.config import settings
@@ -135,6 +137,12 @@ def _build_engine():
     connect_args = {}
     kwargs = {}
 
+    if url.startswith("postgresql"):
+        # libpq waits indefinitely by default. An unreachable database then
+        # hung startup past the platform's port scan instead of failing in
+        # a way that could be retried.
+        connect_args["connect_timeout"] = settings.database_connect_timeout_seconds
+
     if url.startswith("sqlite"):
         # FastAPI runs sync endpoints across a threadpool, so the
         # connection is handed between threads.
@@ -175,3 +183,20 @@ SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, future=True)
 def init_db() -> None:
     """Create tables if they do not exist. Called once at startup."""
     Base.metadata.create_all(engine)
+
+
+def init_db_with_retry(attempts: int = 3, delay_seconds: float = 2.0) -> None:
+    """init_db(), retried with backoff to ride out a database restart.
+
+    Raises the last OperationalError if every attempt fails; the caller
+    decides whether that is fatal.
+    """
+
+    for attempt in range(1, attempts + 1):
+        try:
+            init_db()
+            return
+        except OperationalError:
+            if attempt == attempts:
+                raise
+            time.sleep(delay_seconds * attempt)
