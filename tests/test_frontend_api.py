@@ -123,3 +123,88 @@ def patch_request():
     from unittest.mock import patch
 
     return patch("api.requests.request")
+
+
+# ------------------------------------------------- cold starts
+
+
+def _conn_error():
+    import requests
+
+    return requests.ConnectionError("connection refused")
+
+
+def _timeout():
+    import requests
+
+    return requests.Timeout("read timed out")
+
+
+def test_a_safe_call_is_retried_once_when_the_api_is_asleep():
+    """The free instance takes 30-60s to start; the first call after an
+    idle spell is refused and looked like a broken deployment."""
+
+    from unittest.mock import MagicMock, patch
+
+    ok = MagicMock(status_code=200, ok=True)
+    ok.json.return_value = {"fine": True}
+
+    with (
+        patch("api.requests.request", side_effect=[_conn_error(), ok]) as request,
+        patch("api.wake_backend") as wake,
+        patch("api.time.sleep"),
+    ):
+        assert api._request("GET", "/sessions").json() == {"fine": True}
+
+    assert request.call_count == 2
+    wake.assert_called_once()
+
+
+def test_the_retry_gets_longer_to_wait_than_the_first_try():
+    from unittest.mock import MagicMock, patch
+
+    ok = MagicMock(status_code=200, ok=True)
+
+    with (
+        patch("api.requests.request", side_effect=[_timeout(), ok]) as request,
+        patch("api.wake_backend"),
+        patch("api.time.sleep"),
+    ):
+        api._request("GET", "/sessions")
+
+    first = request.call_args_list[0].kwargs["timeout"][1]
+    second = request.call_args_list[1].kwargs["timeout"][1]
+    assert second > first
+
+
+def test_a_write_is_never_repeated():
+    """Re-sending an upload or a chat turn would double it."""
+
+    from unittest.mock import patch
+
+    with (
+        patch("api.requests.request", side_effect=_conn_error()) as request,
+        patch("api.wake_backend") as wake,
+        patch("api.time.sleep"),
+        pytest.raises(api.ApiError),
+    ):
+        api._request("POST", "/chat", json={"query": "hi"})
+
+    assert request.call_count == 1
+    wake.assert_not_called()
+
+
+def test_the_message_says_the_api_is_waking_rather_than_broken():
+    from unittest.mock import patch
+
+    with (
+        patch("api.requests.request", side_effect=_timeout()),
+        patch("api.wake_backend"),
+        patch("api.time.sleep"),
+        pytest.raises(api.ApiError) as raised,
+    ):
+        api._request("POST", "/chat", json={"query": "hi"})
+
+    message = str(raised.value)
+    assert "waking up" in message
+    assert "Is the backend running?" not in message

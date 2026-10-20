@@ -62,6 +62,12 @@ UPLOAD_READ_TIMEOUT = 120
 JOB_POLL_INTERVAL = 2
 JOB_POLL_TIMEOUT = 600
 
+# A first request after the API has been idle has to wait for it to start,
+# which takes 30-60s on the free instance. The retry is given longer than
+# the normal read timeout rather than failing the patient a second time.
+COLD_START_RETRY_DELAY = 3
+COLD_START_READ_TIMEOUT = 90
+
 # Kept in step with the API's MIN_PASSWORD_LENGTH, for an instant check on
 # the sign-up form. The API still enforces its own value.
 MIN_PASSWORD_LENGTH = int(_setting("MIN_PASSWORD_LENGTH", "10"))

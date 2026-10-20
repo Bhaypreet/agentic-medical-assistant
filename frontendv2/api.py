@@ -15,6 +15,8 @@ import requests
 
 from config import (
     API_KEY,
+    COLD_START_READ_TIMEOUT,
+    COLD_START_RETRY_DELAY,
     CONNECT_TIMEOUT,
     FASTAPI_URL,
     JOB_POLL_INTERVAL,
@@ -150,21 +152,50 @@ def _handle(response: requests.Response):
 
 
 def _request(method: str, path: str, *, read_timeout: float = READ_TIMEOUT, **kwargs):
+    """One API call, retried once if the API was asleep.
 
-    try:
-        response = requests.request(
-            method,
-            f"{FASTAPI_URL}{path}",
-            headers=_headers(),
-            timeout=_timeout(read_timeout),
-            **kwargs,
-        )
-    except requests.Timeout as exc:
-        raise ApiError("The assistant took too long to respond. Please try again.") from exc
-    except requests.ConnectionError as exc:
-        raise ApiError("Can't reach the assistant. Is the backend running?") from exc
+    The API sleeps after fifteen idle minutes and takes 30-60s to start,
+    so the first request after a quiet spell times out or is refused
+    outright. That is not a broken deployment, but it read as one: the
+    patient saw "Can't reach the assistant. Is the backend running?" and
+    had no reason to think trying again would help. The call is made
+    again once, by which time the service is usually up, and the message
+    that is left says what is actually happening.
+    """
 
-    return _handle(response)
+    last: Exception | None = None
+
+    for attempt in range(2):
+        try:
+            return _handle(
+                requests.request(
+                    method,
+                    f"{FASTAPI_URL}{path}",
+                    headers=_headers(),
+                    timeout=_timeout(read_timeout if attempt == 0 else COLD_START_READ_TIMEOUT),
+                    **kwargs,
+                )
+            )
+        except (requests.Timeout, requests.ConnectionError) as exc:
+            last = exc
+
+            # Only a safe-to-repeat call is retried. Re-sending an upload
+            # or a chat turn could double it.
+            if attempt or method.upper() not in ("GET", "HEAD"):
+                break
+
+            wake_backend()
+            time.sleep(COLD_START_RETRY_DELAY)
+
+    if isinstance(last, requests.Timeout):
+        raise ApiError(
+            "The assistant is waking up after being idle, which takes up to a "
+            "minute. Please try again shortly."
+        ) from last
+
+    raise ApiError(
+        "Can't reach the assistant right now. It may be starting up - please try again in a minute."
+    ) from last
 
 
 # ----------------------------------------------------------------- wake
