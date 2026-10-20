@@ -50,11 +50,15 @@ services:
           name: medassist-db
           property: connectionString
 
-      # Render terminates TLS and forwards, so exactly one proxy sits in
-      # front of this service. Without it every request looks like it
-      # came from the load balancer and shares one rate-limit bucket.
+      # Three proxies sit in front of this service: Cloudflare, Render's
+      # edge, and Render's internal router. Measured, not guessed - at "1"
+      # the limiter keyed on Render's internal address (10.24.124.2) and
+      # metered every visitor as one caller; at "2" it keyed on a
+      # Cloudflare node that changes per request, which scattered the
+      # buckets and stopped limiting anything at all. At "3" it resolves
+      # the real client address.
       - key: TRUSTED_PROXY_HOPS
-        value: "1"
+        value: "3"
 
       - key: WEB_CONCURRENCY
         value: "2"

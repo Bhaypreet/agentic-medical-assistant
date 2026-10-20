@@ -121,7 +121,7 @@ list; these are the ones that matter most:
 | `ALLOW_REGISTRATION` | `true` | Set `false` to close sign-ups after creating your accounts. |
 | `DATABASE_URL` | `sqlite:///./sessions.db` | Point at Postgres for any real deploy. |
 | `ALLOWED_ORIGINS` | localhost:8501 | CORS allowlist. |
-| `TRUSTED_PROXY_HOPS` | `0` | Reverse proxies in front of the API. Set to `1` behind a load balancer, or rate limits meter everyone as one caller. |
+| `TRUSTED_PROXY_HOPS` | `0` | Reverse proxies in front of the API. Wrong value and rate limits either meter everyone as one caller or stop limiting at all; **3** on Render. Measure it, see below. |
 | `MAX_UPLOAD_BYTES` | 15 MB | Enforced while streaming to disk. |
 | `MAX_REPORT_PAGES` | 25 | Caps model calls per upload. |
 | `REPORT_RETENTION_HOURS` | 24 | Uploads, report indexes and job rows are swept after this. |
@@ -150,9 +150,22 @@ it and then meter every visitor as one:
 
 To check the hop count is right, look at the warnings the limiter logs when it
 rejects something — they carry the address it decided on. If every visitor shows
-up as the same one, `TRUSTED_PROXY_HOPS` is set too high for what your platform
+up as the same one, `TRUSTED_PROXY_HOPS` is too low for what your platform
 actually appends; if the address changes on every request from one browser, it
-is too low and clients are choosing their own.
+is too high and the key is landing on a proxy that rotates.
+
+Measured on Render, the right value is **3** - Cloudflare, Render's edge and
+Render's internal router. The way to check is to spend a limit deliberately and
+read the line the limiter logs:
+
+```
+ratelimit 10 per 1 minute (ip:203.0.113.7) exceeded at endpoint: /auth/login
+```
+
+The address in brackets must be the caller's own public address. At `1` this
+service logged `10.24.124.2`, Render's internal router, and metered everyone
+together; at `2` it logged a Cloudflare node that changed per request, so no
+limit ever triggered.
 
 ---
 
@@ -245,7 +258,7 @@ Deploying by hand instead, or on another host, the checklist is:
 | `GROQ_API_KEY` | Required. Startup aborts without it. |
 | `SECRET_KEY`, 32+ chars | Required when `ENVIRONMENT=production`. Pepper for password hashes — changing it later invalidates every account and session. |
 | `DATABASE_URL` → Postgres | Container filesystems are ephemeral, so the SQLite default loses every account on each deploy. |
-| `TRUSTED_PROXY_HOPS=1` | Behind a load balancer. Without it every visitor is metered as one caller and a few sign-ups lock everyone out. |
+| `TRUSTED_PROXY_HOPS=3` | The measured value on Render. Without it every visitor is metered as one caller and a few sign-ups lock everyone out. |
 | `API_KEYS` + `MEDICAL_ASSISTANT_API_KEY` | The same secret on the API and the frontend. Lets the frontend identify itself so each visitor gets their own allowance. |
 | Health check → `/health` | Liveness. Use this, not `/ready`, which reports degraded while the knowledge base warms up. |
 
